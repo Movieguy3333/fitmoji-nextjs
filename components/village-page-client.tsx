@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { SwarmSimControls } from '@/components/swarm-sim-controls';
 import { SwarmVillageLiveScene } from '@/components/swarm-village-live-scene';
 import type { SimControls } from '@/lib/swarm-village/sim/useSwarmSimulation';
+import type { BattleStatus } from '@/lib/swarm-village/sim/types';
 import type { SwarmVillageMapSnapshot } from '@/types/swarm-village';
 
 type Props = {
@@ -18,11 +19,9 @@ type Props = {
 
 const DEFAULT_CONTROLS: SimControls = {
   isSwarmActive: false,
-  waveSize: 20,
-  enemyKind: 'normal',
-  spawnIntervalMs: 700,
-  crazyCapyEnabled: false,
-  walkerCount: 4,
+  damageMultiplier: 1.0,
+  hpMultiplier: 1.0,
+  enemySpeedMultiplier: 1.0,
 };
 
 export function VillagePageClient({
@@ -33,6 +32,22 @@ export function VillagePageClient({
   tagline,
 }: Props) {
   const [controls, setControls] = useState<SimControls>(DEFAULT_CONTROLS);
+  const [swarmStatus, setSwarmStatus] = useState<BattleStatus>('ready');
+
+  const swarmLocked = swarmStatus === 'wave';
+
+  function handleSwarmToggle() {
+    setControls((prev) => ({ ...prev, isSwarmActive: !prev.isSwarmActive }));
+  }
+
+  function handleSwarmStatusChange(status: BattleStatus) {
+    setSwarmStatus(status);
+    if (status === 'cleared' || status === 'lost') {
+      setControls((prev) =>
+        prev.isSwarmActive ? { ...prev, isSwarmActive: false } : prev,
+      );
+    }
+  }
 
   return (
     <>
@@ -42,6 +57,7 @@ export function VillagePageClient({
         playerName={playerName}
         controls={controls}
         className="absolute inset-0"
+        onStatusChange={handleSwarmStatusChange}
       />
 
       <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-[#081018]/42 via-transparent to-[#081018]/16" />
@@ -55,7 +71,11 @@ export function VillagePageClient({
         </Link>
       </div>
 
-      <SwarmSimControls value={controls} onChange={setControls} />
+      <SwarmSimControls
+        value={controls}
+        onChange={setControls}
+        swarmLocked={swarmLocked}
+      />
 
       <section className="absolute inset-x-4 bottom-4 z-[900] sm:inset-x-8 sm:bottom-8">
         <div className="mx-auto flex max-w-5xl flex-col gap-4 rounded-lg border border-white/45 bg-[#fffefa]/88 p-4 shadow-[0_24px_70px_rgba(8,16,24,0.22)] backdrop-blur-md sm:flex-row sm:items-end sm:justify-between sm:p-5">
@@ -71,9 +91,22 @@ export function VillagePageClient({
             </p>
             <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-6 text-[#5f574b]">
               {tagline ??
-                'Use the gear icon to activate the swarm simulation.'}
+                'Use the gear icon to tune the simulation, then launch a swarm.'}
             </p>
           </div>
+
+          {/* Swarm launch / stop button */}
+          <button
+            type="button"
+            onClick={handleSwarmToggle}
+            className={`flex-shrink-0 rounded-lg px-5 py-3 text-[0.75rem] font-black uppercase tracking-[0.18em] shadow-[0_8px_20px_rgba(8,16,24,0.2)] transition ${
+              controls.isSwarmActive
+                ? 'bg-[#e76f51] text-white hover:bg-[#d4613f]'
+                : 'bg-[#2a9d8f] text-white hover:bg-[#248a7d]'
+            }`}
+          >
+            {controls.isSwarmActive ? 'Stop Swarm' : 'Launch Swarm'}
+          </button>
 
           <dl className="grid grid-cols-2 gap-2 text-xs sm:w-64">
             <div className="rounded-md border border-[#2f2a1f]/10 bg-white/60 p-3">
