@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { SwarmVillageBoardCell } from '@/types/swarm-village';
+import type { SwarmVillageBoardCell } from "@/types/swarm-village";
 
-import { boardIndex } from './board';
+import { boardIndex } from "./board";
 import {
   DEFAULT_WAVE_SIZE,
   IJOM_BASE_DAMAGE,
@@ -17,9 +17,9 @@ import {
   VILLAGE_AVATAR_IDLE_MIN_DELAY_MS,
   VILLAGE_AVATAR_WALK_SPEED_PER_TICK,
   WAVE_SIMULATION_INTERVAL_MS,
-} from './constants';
-import { getEnemySpawnPosition } from './combat';
-import { getPathCells, stepEnemy, stepWalker } from './pathing';
+} from "./constants";
+import { getEnemySpawnPosition } from "./combat";
+import { getPathCells, stepEnemy, stepWalker } from "./pathing";
 import type {
   BattleStatus,
   BoardPatch,
@@ -27,8 +27,8 @@ import type {
   CrazyCapyState,
   Enemy,
   Walker,
-} from './types';
-import { randomIntBetween } from './utils';
+} from "./types";
+import { randomIntBetween } from "./utils";
 
 // Internal sim parameters not exposed as user controls
 const INTERNAL_WAVE_SIZE = DEFAULT_WAVE_SIZE;
@@ -105,8 +105,8 @@ function spawnEnemy(
   hpMultiplier: number,
   speedMultiplier: number,
 ): Enemy | null {
-  const variant: 'normal' | 'snow' =
-    Math.random() < SNOW_IJOM_SPAWN_CHANCE ? 'snow' : 'normal';
+  const variant: "normal" | "snow" =
+    Math.random() < SNOW_IJOM_SPAWN_CHANCE ? "snow" : "normal";
   const pos = getEnemySpawnPosition(enemies, gridCols, variant);
   if (!pos) return null;
 
@@ -115,8 +115,11 @@ function spawnEnemy(
     IJOM_VILLAGE_SPEED_SCALE *
     IJOM_SPEED_MULTIPLIER;
 
-  const baseMaxHp = variant === 'snow' ? 28 : 18;
+  const baseMaxHp = variant === "snow" ? 28 : 18;
   const maxHp = Math.round(baseMaxHp * hpMultiplier);
+
+  console.log("damage", IJOM_BASE_DAMAGE * damageMultiplier);
+  console.log("hp", maxHp);
 
   return {
     id: nextEnemyId(),
@@ -127,7 +130,7 @@ function spawnEnemy(
     maxHp,
     // Dividing by hpMultiplier makes trees effectively tankier relative to
     // enemy damage, which is what "HP multiplier for trees" means in practice.
-    damage: (IJOM_BASE_DAMAGE * damageMultiplier) / hpMultiplier,
+    damage: IJOM_BASE_DAMAGE * damageMultiplier,
     speedPerTick: baseSpeed * speedMultiplier,
     spawnedAt: now,
     lastAttackAt: 0,
@@ -156,14 +159,14 @@ export function useSwarmSimulation(args: {
   const walkersRef = useRef<Walker[]>([]);
   const lastSpawnAtRef = useRef<number>(0);
   const shipHpRef = useRef<number>(SHIP_MAX_HP);
-  const statusRef = useRef<BattleStatus>('ready');
+  const statusRef = useRef<BattleStatus>("ready");
   const waveSpawnedRef = useRef<number>(0);
 
   const [board, setBoard] = useState<SwarmVillageBoardCell[]>(boardRef.current);
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [walkers, setWalkers] = useState<Walker[]>([]);
   const [shipHp, setShipHp] = useState(SHIP_MAX_HP);
-  const [status, setStatus] = useState<BattleStatus>('ready');
+  const [status, setStatus] = useState<BattleStatus>("ready");
 
   // Rebuild board ref when initialBoard changes (e.g. different village loaded)
   useEffect(() => {
@@ -172,14 +175,14 @@ export function useSwarmSimulation(args: {
     walkersRef.current = [];
     lastSpawnAtRef.current = 0;
     shipHpRef.current = SHIP_MAX_HP;
-    statusRef.current = 'ready';
+    statusRef.current = "ready";
     waveSpawnedRef.current = 0;
 
     setBoard(boardRef.current);
     setEnemies([]);
     setWalkers([]);
     setShipHp(SHIP_MAX_HP);
-    setStatus('ready');
+    setStatus("ready");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialBoard, gridCols]);
 
@@ -200,14 +203,14 @@ export function useSwarmSimulation(args: {
 
       const currentStatus = statusRef.current;
       const isTerminal =
-        currentStatus === 'cleared' || currentStatus === 'lost';
+        currentStatus === "cleared" || currentStatus === "lost";
 
       if (isTerminal) {
         // When the user turns off the swarm after a terminal state, reset so a
         // new wave can start on the next isSwarmActive=true cycle.
         if (!ctrl.isSwarmActive) {
-          statusRef.current = 'ready';
-          setStatus('ready');
+          statusRef.current = "ready";
+          setStatus("ready");
           shipHpRef.current = SHIP_MAX_HP;
           setShipHp(SHIP_MAX_HP);
           waveSpawnedRef.current = 0;
@@ -227,9 +230,9 @@ export function useSwarmSimulation(args: {
           enemiesRef.current = ens;
           setEnemies([]);
           setShipHp(hp);
-          if (statusRef.current !== 'ready') {
-            statusRef.current = 'ready';
-            setStatus('ready');
+          if (statusRef.current !== "ready") {
+            statusRef.current = "ready";
+            setStatus("ready");
           }
         }
         stepWalkers(now, boardRef.current, ctrl);
@@ -237,9 +240,9 @@ export function useSwarmSimulation(args: {
       }
 
       // ── Status: start wave ────────────────────────────────────
-      if (currentStatus === 'ready') {
-        statusRef.current = 'wave';
-        setStatus('wave');
+      if (currentStatus === "ready") {
+        statusRef.current = "wave";
+        setStatus("wave");
         waveSpawnedRef.current = 0;
         ws = 0;
         shipHpRef.current = SHIP_MAX_HP;
@@ -319,9 +322,9 @@ export function useSwarmSimulation(args: {
       setShipHp(hp);
 
       // ── Win/loss checks ───────────────────────────────────────
-      if (hp <= 0 && statusRef.current === 'wave') {
-        statusRef.current = 'lost';
-        setStatus('lost');
+      if (hp <= 0 && statusRef.current === "wave") {
+        statusRef.current = "lost";
+        setStatus("lost");
         // Clear all enemies from the board immediately
         enemiesRef.current = [];
         setEnemies([]);
@@ -330,10 +333,10 @@ export function useSwarmSimulation(args: {
       if (
         ws >= INTERNAL_WAVE_SIZE &&
         ens.length === 0 &&
-        statusRef.current === 'wave'
+        statusRef.current === "wave"
       ) {
-        statusRef.current = 'cleared';
-        setStatus('cleared');
+        statusRef.current = "cleared";
+        setStatus("cleared");
         return;
       }
 
@@ -356,7 +359,10 @@ export function useSwarmSimulation(args: {
       const pathCells = getPathCells(currentBoard, gridCols);
       let walkerList = walkersRef.current;
 
-      while (walkerList.length < INTERNAL_WALKER_COUNT && pathCells.length >= 2) {
+      while (
+        walkerList.length < INTERNAL_WALKER_COUNT &&
+        pathCells.length >= 2
+      ) {
         const w = spawnWalker(pathCells);
         if (w) walkerList = [...walkerList, w];
         else break;
