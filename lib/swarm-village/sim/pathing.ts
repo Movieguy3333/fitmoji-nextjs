@@ -264,52 +264,7 @@ export function getPathCells(
   return results;
 }
 
-/** Simple walker step: move toward target path cell, pick a new one when arrived. */
-export function stepWalker(
-  walker: {
-    id: string;
-    row: number;
-    col: number;
-    targetRow: number;
-    targetCol: number;
-    facingScaleX: 1 | -1;
-    speedPerTick: number;
-    pauseUntil: number;
-  },
-  now: number,
-  pathCells: Array<{ row: number; col: number }>,
-): typeof walker {
-  if (now < walker.pauseUntil) return walker;
-  if (pathCells.length === 0) return walker;
-
-  const dr = walker.targetRow - walker.row;
-  const dc = walker.targetCol - walker.col;
-  const distance = Math.hypot(dr, dc);
-
-  if (distance < 0.15) {
-    const next =
-      pathCells[Math.floor(Math.random() * pathCells.length)]!;
-    return {
-      ...walker,
-      targetRow: next.row,
-      targetCol: next.col,
-      pauseUntil: now + 600 + Math.random() * 1200,
-    };
-  }
-
-  const step = Math.min(walker.speedPerTick, distance);
-  const nextRow = walker.row + (dr / distance) * step;
-  const nextCol = walker.col + (dc / distance) * step;
-
-  return {
-    ...walker,
-    row: nextRow,
-    col: nextCol,
-    facingScaleX: dc < 0 ? -1 : 1,
-  };
-}
-
-/** Deduplicated key set for path cells (used for walker target validation). */
+/** Deduplicated key set for path cells. */
 export function buildPathKeySet(
   pathCells: Array<{ row: number; col: number }>,
 ): Set<string> {

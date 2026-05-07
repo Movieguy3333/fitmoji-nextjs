@@ -147,24 +147,24 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
             <Slider
               label="Damage multiplier"
               sublabel="Trees &amp; enemies"
-              value={value.damageMultiplier}
+              value={value.ijomDamageMultiplier}
               min={0.25}
               max={3}
               step={0.25}
               display={fmtMult}
-              onChange={(v) => set('damageMultiplier', v)}
+              onChange={(v) => set('ijomDamageMultiplier', v)}
               disabled={swarmLocked}
             />
 
             <Slider
               label="HP multiplier"
               sublabel="Trees &amp; enemies"
-              value={value.hpMultiplier}
+              value={value.ijomHpMultiplier}
               min={0.25}
               max={3}
               step={0.25}
               display={fmtMult}
-              onChange={(v) => set('hpMultiplier', v)}
+              onChange={(v) => set('ijomHpMultiplier', v)}
               disabled={swarmLocked}
             />
 

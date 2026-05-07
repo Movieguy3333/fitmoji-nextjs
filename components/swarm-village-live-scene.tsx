@@ -20,9 +20,7 @@ import type { SimControls } from "@/lib/swarm-village/sim/useSwarmSimulation";
 import { useSwarmSimulation } from "@/lib/swarm-village/sim/useSwarmSimulation";
 import type {
   BattleStatus,
-  CrazyCapyState,
   Enemy,
-  Walker,
 } from "@/lib/swarm-village/sim/types";
 
 type Props = {
@@ -37,8 +35,6 @@ type Props = {
 const ENEMY_FRAME_COUNT_NORMAL = 5;
 const ENEMY_FRAME_COUNT_SNOW = 6;
 const ENEMY_ANIM_INTERVAL_MS = 140;
-const CAPY_ASSET = "/swarm-village/quest/crazycapy.gif";
-const CAPY_SIZE = 60;
 
 /** Convert absolute pixel position to % of boardWidth / boardHeight */
 function toPct(px: number, total: number): string {
@@ -184,77 +180,6 @@ function EnemySprite({
   );
 }
 
-function CapySprite({
-  capy,
-  boardCenterX,
-  boardWidth,
-  boardHeight,
-}: {
-  capy: CrazyCapyState;
-  boardCenterX: number;
-  boardWidth: number;
-  boardHeight: number;
-}) {
-  const pos = isoPos(boardCenterX, capy.row, capy.col);
-  const zIndex = 360 + Math.floor((capy.row + capy.col) * 10) + 5;
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={CAPY_ASSET}
-      alt=""
-      draggable={false}
-      style={toEntityStyle(
-        pos,
-        CAPY_SIZE,
-        CAPY_SIZE,
-        boardWidth,
-        boardHeight,
-        zIndex,
-        capy.facingScaleX === -1,
-      )}
-    />
-  );
-}
-
-function WalkerSprite({
-  walker,
-  avatarSrc,
-  boardCenterX,
-  boardWidth,
-  boardHeight,
-}: {
-  walker: Walker;
-  avatarSrc: string;
-  boardCenterX: number;
-  boardWidth: number;
-  boardHeight: number;
-}) {
-  const pos = isoPos(boardCenterX, walker.row, walker.col);
-  const spriteSize = 32;
-  const zIndex = 360 + Math.floor((walker.row + walker.col) * 10) + 1;
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={avatarSrc}
-      alt=""
-      draggable={false}
-      style={{
-        ...toEntityStyle(
-          pos,
-          spriteSize,
-          spriteSize,
-          boardWidth,
-          boardHeight,
-          zIndex,
-          walker.facingScaleX === -1,
-        ),
-        borderRadius: "50%",
-      }}
-    />
-  );
-}
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -443,18 +368,6 @@ export function SwarmVillageLiveScene({
           style={toLayerStyle(scene.homeAvatar)}
         />
 
-        {/* Walkers */}
-        {sim.walkers.map((walker) => (
-          <WalkerSprite
-            key={walker.id}
-            walker={walker}
-            avatarSrc={avatarSrc}
-            boardCenterX={scene.boardCenterX}
-            boardWidth={scene.boardWidth}
-            boardHeight={scene.boardHeight}
-          />
-        ))}
-
         {/* Enemies — each renders its own HP bar above itself */}
         {sim.enemies.map((enemy) => (
           <EnemySprite
@@ -466,15 +379,7 @@ export function SwarmVillageLiveScene({
           />
         ))}
 
-        {/* Crazy Capy (disabled; null is returned by sim but kept for type compat) */}
-        {sim.crazyCapy && (
-          <CapySprite
-            capy={sim.crazyCapy}
-            boardCenterX={scene.boardCenterX}
-            boardWidth={scene.boardWidth}
-            boardHeight={scene.boardHeight}
-          />
-        )}
+
       </div>
     </div>
   );

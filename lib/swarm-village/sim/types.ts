@@ -17,37 +17,6 @@ export type Enemy = {
   lastAttackAt: number;
 };
 
-export type CrazyCapyState = {
-  row: number;
-  col: number;
-  targetRow: number;
-  targetCol: number;
-  activeUntil: number;
-  durationMs: number;
-  spawnedAt: number;
-  facingScaleX: 1 | -1;
-};
-
-export type CrazyCapyKnockoutEffect = {
-  id: string;
-  variant: Enemy['variant'];
-  row: number;
-  col: number;
-  startedAt: number;
-  directionX: 1 | -1;
-  rotationDirection: 1 | -1;
-};
-
-export type Walker = {
-  id: string;
-  row: number;
-  col: number;
-  targetRow: number;
-  targetCol: number;
-  facingScaleX: 1 | -1;
-  speedPerTick: number;
-  pauseUntil: number;
-};
 
 export type BoardPatch = {
   row: number;

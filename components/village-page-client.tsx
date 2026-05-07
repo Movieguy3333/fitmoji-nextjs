@@ -19,8 +19,8 @@ type Props = {
 
 const DEFAULT_CONTROLS: SimControls = {
   isSwarmActive: false,
-  damageMultiplier: 1.0,
-  hpMultiplier: 1.0,
+  ijomDamageMultiplier: 1.0,
+  ijomHpMultiplier: 1.0,
   enemySpeedMultiplier: 1.0,
 };
 

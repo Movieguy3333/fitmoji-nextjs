@@ -13,44 +13,31 @@ import {
   IJOM_SPEED_PER_TICK_VARIANCE,
   IJOM_VILLAGE_SPEED_SCALE,
   SHIP_MAX_HP,
-  VILLAGE_AVATAR_IDLE_MAX_DELAY_MS,
-  VILLAGE_AVATAR_IDLE_MIN_DELAY_MS,
-  VILLAGE_AVATAR_WALK_SPEED_PER_TICK,
   WAVE_SIMULATION_INTERVAL_MS,
 } from "./constants";
 import { getEnemySpawnPosition } from "./combat";
-import { getPathCells, stepEnemy, stepWalker } from "./pathing";
-import type {
-  BattleStatus,
-  BoardPatch,
-  CrazyCapyKnockoutEffect,
-  CrazyCapyState,
-  Enemy,
-  Walker,
-} from "./types";
+import { getPathCells, stepEnemy } from "./pathing";
+import type { BattleStatus, BoardPatch, Enemy } from "./types";
 import { randomIntBetween } from "./utils";
 
 // Internal sim parameters not exposed as user controls
 const INTERNAL_WAVE_SIZE = DEFAULT_WAVE_SIZE;
 const SNOW_IJOM_SPAWN_CHANCE = 0.2;
 const INTERNAL_SPAWN_INTERVAL_MS = 700;
-const INTERNAL_WALKER_COUNT = 4;
 const CASTLE_DAMAGE_BASE = 14;
 
 export type SimControls = {
   isSwarmActive: boolean;
   /** Scales attack damage for both enemies (vs units/castle) and combative trees. */
-  damageMultiplier: number;
+  ijomDamageMultiplier: number;
   /** Scales max HP for both enemies and combative tree units. */
-  hpMultiplier: number;
+  ijomHpMultiplier: number;
   /** Scales enemy movement speed. */
   enemySpeedMultiplier: number;
 };
 
 let enemyIdCounter = 0;
 const nextEnemyId = () => `e-${++enemyIdCounter}`;
-let walkerIdCounter = 0;
-const nextWalkerId = () => `w-${++walkerIdCounter}`;
 
 function makeFreshBoard(
   source: SwarmVillageBoardCell[],
@@ -74,35 +61,12 @@ function applyPatches(
   return { board: next, changed: true };
 }
 
-function spawnWalker(
-  pathCells: Array<{ row: number; col: number }>,
-): Walker | null {
-  if (pathCells.length < 2) return null;
-  const start = pathCells[Math.floor(Math.random() * pathCells.length)]!;
-  const target = pathCells[Math.floor(Math.random() * pathCells.length)]!;
-  return {
-    id: nextWalkerId(),
-    row: start.row,
-    col: start.col,
-    targetRow: target.row,
-    targetCol: target.col,
-    facingScaleX: 1,
-    speedPerTick: VILLAGE_AVATAR_WALK_SPEED_PER_TICK,
-    pauseUntil:
-      Date.now() +
-      randomIntBetween(
-        VILLAGE_AVATAR_IDLE_MIN_DELAY_MS,
-        VILLAGE_AVATAR_IDLE_MAX_DELAY_MS,
-      ),
-  };
-}
-
 function spawnEnemy(
   enemies: Enemy[],
   gridCols: number,
   now: number,
-  damageMultiplier: number,
-  hpMultiplier: number,
+  ijomDamageMultiplier: number,
+  ijomHpMultiplier: number,
   speedMultiplier: number,
 ): Enemy | null {
   const variant: "normal" | "snow" =
@@ -116,9 +80,9 @@ function spawnEnemy(
     IJOM_SPEED_MULTIPLIER;
 
   const baseMaxHp = variant === "snow" ? 28 : 18;
-  const maxHp = Math.round(baseMaxHp * hpMultiplier);
+  const maxHp = Math.round(baseMaxHp * ijomHpMultiplier);
 
-  console.log("damage", IJOM_BASE_DAMAGE * damageMultiplier);
+  console.log("damage", IJOM_BASE_DAMAGE * ijomDamageMultiplier);
   console.log("hp", maxHp);
 
   return {
@@ -128,9 +92,7 @@ function spawnEnemy(
     col: pos.col,
     hp: maxHp,
     maxHp,
-    // Dividing by hpMultiplier makes trees effectively tankier relative to
-    // enemy damage, which is what "HP multiplier for trees" means in practice.
-    damage: IJOM_BASE_DAMAGE * damageMultiplier,
+    damage: IJOM_BASE_DAMAGE * ijomDamageMultiplier,
     speedPerTick: baseSpeed * speedMultiplier,
     spawnedAt: now,
     lastAttackAt: 0,
@@ -144,9 +106,6 @@ export function useSwarmSimulation(args: {
 }): {
   board: SwarmVillageBoardCell[];
   enemies: Enemy[];
-  crazyCapy: CrazyCapyState | null;
-  crazyCapyKnockoutEffects: CrazyCapyKnockoutEffect[];
-  walkers: Walker[];
   shipHp: number;
   status: BattleStatus;
 } {
@@ -156,7 +115,6 @@ export function useSwarmSimulation(args: {
     makeFreshBoard(initialBoard),
   );
   const enemiesRef = useRef<Enemy[]>([]);
-  const walkersRef = useRef<Walker[]>([]);
   const lastSpawnAtRef = useRef<number>(0);
   const shipHpRef = useRef<number>(SHIP_MAX_HP);
   const statusRef = useRef<BattleStatus>("ready");
@@ -164,7 +122,6 @@ export function useSwarmSimulation(args: {
 
   const [board, setBoard] = useState<SwarmVillageBoardCell[]>(boardRef.current);
   const [enemies, setEnemies] = useState<Enemy[]>([]);
-  const [walkers, setWalkers] = useState<Walker[]>([]);
   const [shipHp, setShipHp] = useState(SHIP_MAX_HP);
   const [status, setStatus] = useState<BattleStatus>("ready");
 
@@ -172,7 +129,6 @@ export function useSwarmSimulation(args: {
   useEffect(() => {
     boardRef.current = makeFreshBoard(initialBoard);
     enemiesRef.current = [];
-    walkersRef.current = [];
     lastSpawnAtRef.current = 0;
     shipHpRef.current = SHIP_MAX_HP;
     statusRef.current = "ready";
@@ -180,7 +136,6 @@ export function useSwarmSimulation(args: {
 
     setBoard(boardRef.current);
     setEnemies([]);
-    setWalkers([]);
     setShipHp(SHIP_MAX_HP);
     setStatus("ready");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -215,7 +170,6 @@ export function useSwarmSimulation(args: {
           setShipHp(SHIP_MAX_HP);
           waveSpawnedRef.current = 0;
         }
-        stepWalkers(now, boardRef.current, ctrl);
         return;
       }
 
@@ -235,7 +189,6 @@ export function useSwarmSimulation(args: {
             setStatus("ready");
           }
         }
-        stepWalkers(now, boardRef.current, ctrl);
         return;
       }
 
@@ -260,8 +213,8 @@ export function useSwarmSimulation(args: {
           ens,
           gridCols,
           now,
-          ctrl.damageMultiplier,
-          ctrl.hpMultiplier,
+          ctrl.ijomDamageMultiplier,
+          ctrl.ijomHpMultiplier,
           ctrl.enemySpeedMultiplier,
         );
         if (enemy) {
@@ -300,7 +253,7 @@ export function useSwarmSimulation(args: {
           if (reachedCastle) {
             hp = Math.max(
               0,
-              hp - Math.round(CASTLE_DAMAGE_BASE * ctrl.damageMultiplier),
+              hp - Math.round(CASTLE_DAMAGE_BASE * ctrl.ijomDamageMultiplier),
             );
           }
         } else {
@@ -325,7 +278,6 @@ export function useSwarmSimulation(args: {
       if (hp <= 0 && statusRef.current === "wave") {
         statusRef.current = "lost";
         setStatus("lost");
-        // Clear all enemies from the board immediately
         enemiesRef.current = [];
         setEnemies([]);
         return;
@@ -339,9 +291,6 @@ export function useSwarmSimulation(args: {
         setStatus("cleared");
         return;
       }
-
-      // ── Walkers ───────────────────────────────────────────────
-      stepWalkers(now, nextBoard, ctrl);
     }, WAVE_SIMULATION_INTERVAL_MS);
 
     return () => clearInterval(id);
@@ -350,43 +299,9 @@ export function useSwarmSimulation(args: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gridCols]);
 
-  const stepWalkers = useCallback(
-    (
-      now: number,
-      currentBoard: SwarmVillageBoardCell[],
-      _ctrl: SimControls,
-    ) => {
-      const pathCells = getPathCells(currentBoard, gridCols);
-      let walkerList = walkersRef.current;
-
-      while (
-        walkerList.length < INTERNAL_WALKER_COUNT &&
-        pathCells.length >= 2
-      ) {
-        const w = spawnWalker(pathCells);
-        if (w) walkerList = [...walkerList, w];
-        else break;
-      }
-      if (walkerList.length > INTERNAL_WALKER_COUNT) {
-        walkerList = walkerList.slice(0, INTERNAL_WALKER_COUNT);
-      }
-
-      if (pathCells.length > 0) {
-        walkerList = walkerList.map((w) => stepWalker(w, now, pathCells));
-      }
-
-      walkersRef.current = walkerList;
-      setWalkers([...walkerList]);
-    },
-    [gridCols],
-  );
-
   return {
     board,
     enemies,
-    crazyCapy: null,
-    crazyCapyKnockoutEffects: [],
-    walkers,
     shipHp,
     status,
   };
