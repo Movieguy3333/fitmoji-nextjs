@@ -12,6 +12,7 @@ import type { SwarmVillageMapSnapshot } from "@/types/swarm-village";
 import {
   BOARD_TOP_INSET,
   ENEMY_SPRITE_SIZE,
+  HALF_H,
   SHIP_MAX_HP,
   SNOW_IJOM_SPRITE_SCALE,
   TILE_WIDTH,
@@ -22,6 +23,11 @@ import type {
   BattleStatus,
   Enemy,
 } from "@/lib/swarm-village/sim/types";
+import type { Projectile } from "@/lib/swarm-village/sim/tree-combat";
+import {
+  getFootballScreenAngle,
+  getProjectileElevation,
+} from "@/lib/swarm-village/sim/tree-combat";
 
 type Props = {
   map: SwarmVillageMapSnapshot;
@@ -180,6 +186,65 @@ function EnemySprite({
   );
 }
 
+
+// ── Projectile sprite ─────────────────────────────────────────────────────────
+
+function ProjectileSprite({
+  projectile,
+  boardCenterX,
+  boardWidth,
+  boardHeight,
+}: {
+  projectile: Projectile;
+  boardCenterX: number;
+  boardWidth: number;
+  boardHeight: number;
+}) {
+  const pos = isoPos(boardCenterX, projectile.row, projectile.col);
+  const elevation = getProjectileElevation(projectile);
+  const elevatedTop = pos.top - elevation * HALF_H;
+  const zIndex = 420 + Math.floor((projectile.row + projectile.col) * 10);
+
+  if (projectile.kind === "football") {
+    const angle = getFootballScreenAngle(projectile);
+    return (
+      <div
+        style={{
+          position: "absolute",
+          left: toPct(pos.left + TILE_WIDTH / 2 - 12, boardWidth),
+          top: toPct(elevatedTop - 8, boardHeight),
+          width: toPct(24, boardWidth),
+          height: toPct(14, boardHeight),
+          zIndex,
+          borderRadius: "50%",
+          background: "#8B4513",
+          border: "2px solid #5C2D0A",
+          transform: `rotate(${angle}rad)`,
+          transformOrigin: "center center",
+          pointerEvents: "none",
+        }}
+      />
+    );
+  }
+
+  // Tennis ball — small white circle
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: toPct(pos.left + TILE_WIDTH / 2 - 5, boardWidth),
+        top: toPct(elevatedTop - 5, boardHeight),
+        width: toPct(10, boardWidth),
+        height: toPct(10, boardHeight),
+        zIndex,
+        borderRadius: "50%",
+        background: "#ffffff",
+        boxShadow: "0 0 5px rgba(255,255,255,0.65)",
+        pointerEvents: "none",
+      }}
+    />
+  );
+}
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -379,6 +444,16 @@ export function SwarmVillageLiveScene({
           />
         ))}
 
+        {/* Projectiles — tennis balls and footballs */}
+        {sim.projectiles.map((projectile) => (
+          <ProjectileSprite
+            key={projectile.id}
+            projectile={projectile}
+            boardCenterX={scene.boardCenterX}
+            boardWidth={scene.boardWidth}
+            boardHeight={scene.boardHeight}
+          />
+        ))}
 
       </div>
     </div>

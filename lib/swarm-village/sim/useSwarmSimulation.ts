@@ -17,6 +17,8 @@ import {
 } from "./constants";
 import { getEnemySpawnPosition } from "./combat";
 import { getPathCells, stepEnemy } from "./pathing";
+import type { Projectile } from "./tree-combat";
+import { stepTreeCombat } from "./tree-combat";
 import type { BattleStatus, BoardPatch, Enemy } from "./types";
 import { randomIntBetween } from "./utils";
 
@@ -38,6 +40,9 @@ export type SimControls = {
 
 let enemyIdCounter = 0;
 const nextEnemyId = () => `e-${++enemyIdCounter}`;
+
+let projectileIdCounter = 0;
+const nextProjectileId = () => `p-${++projectileIdCounter}`;
 
 function makeFreshBoard(
   source: SwarmVillageBoardCell[],
@@ -106,6 +111,7 @@ export function useSwarmSimulation(args: {
 }): {
   board: SwarmVillageBoardCell[];
   enemies: Enemy[];
+  projectiles: Projectile[];
   shipHp: number;
   status: BattleStatus;
 } {
@@ -115,6 +121,7 @@ export function useSwarmSimulation(args: {
     makeFreshBoard(initialBoard),
   );
   const enemiesRef = useRef<Enemy[]>([]);
+  const projectilesRef = useRef<Projectile[]>([]);
   const lastSpawnAtRef = useRef<number>(0);
   const shipHpRef = useRef<number>(SHIP_MAX_HP);
   const statusRef = useRef<BattleStatus>("ready");
@@ -122,6 +129,7 @@ export function useSwarmSimulation(args: {
 
   const [board, setBoard] = useState<SwarmVillageBoardCell[]>(boardRef.current);
   const [enemies, setEnemies] = useState<Enemy[]>([]);
+  const [projectiles, setProjectiles] = useState<Projectile[]>([]);
   const [shipHp, setShipHp] = useState(SHIP_MAX_HP);
   const [status, setStatus] = useState<BattleStatus>("ready");
 
@@ -129,6 +137,7 @@ export function useSwarmSimulation(args: {
   useEffect(() => {
     boardRef.current = makeFreshBoard(initialBoard);
     enemiesRef.current = [];
+    projectilesRef.current = [];
     lastSpawnAtRef.current = 0;
     shipHpRef.current = SHIP_MAX_HP;
     statusRef.current = "ready";
@@ -136,6 +145,7 @@ export function useSwarmSimulation(args: {
 
     setBoard(boardRef.current);
     setEnemies([]);
+    setProjectiles([]);
     setShipHp(SHIP_MAX_HP);
     setStatus("ready");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,14 +185,16 @@ export function useSwarmSimulation(args: {
 
       // ── isSwarmActive off: drain enemies ─────────────────────
       if (!ctrl.isSwarmActive) {
-        if (ens.length > 0) {
+        if (ens.length > 0 || projectilesRef.current.length > 0) {
           ens = [];
           ws = 0;
           hp = SHIP_MAX_HP;
+          projectilesRef.current = [];
           shipHpRef.current = hp;
           waveSpawnedRef.current = ws;
           enemiesRef.current = ens;
           setEnemies([]);
+          setProjectiles([]);
           setShipHp(hp);
           if (statusRef.current !== "ready") {
             statusRef.current = "ready";
@@ -263,6 +275,41 @@ export function useSwarmSimulation(args: {
 
       ens = nextEns;
 
+      // ── Tree combat (boxer melee + tennis/QB projectiles) ─────────────────
+      const {
+        nextProjectiles,
+        boardPatches: treePatches,
+        enemyDamage,
+      } = stepTreeCombat({
+        board: nextBoard,
+        gridCols,
+        enemies: ens,
+        projectiles: projectilesRef.current,
+        now,
+        damageMultiplier: ctrl.ijomDamageMultiplier,
+        nextProjectileId,
+      });
+
+      if (treePatches.length > 0) {
+        const result = applyPatches(nextBoard, treePatches, gridCols);
+        if (result.changed) {
+          nextBoard = result.board;
+          boardChanged = true;
+        }
+      }
+
+      if (enemyDamage.size > 0) {
+        ens = ens
+          .map((e) => {
+            const dmg = enemyDamage.get(e.id);
+            return dmg != null ? { ...e, hp: e.hp - dmg } : e;
+          })
+          .filter((e) => e.hp > 0);
+      }
+
+      projectilesRef.current = nextProjectiles;
+      setProjectiles([...nextProjectiles]);
+
       if (boardChanged) {
         boardRef.current = nextBoard;
         setBoard(nextBoard);
@@ -279,7 +326,9 @@ export function useSwarmSimulation(args: {
         statusRef.current = "lost";
         setStatus("lost");
         enemiesRef.current = [];
+        projectilesRef.current = [];
         setEnemies([]);
+        setProjectiles([]);
         return;
       }
       if (
@@ -302,6 +351,7 @@ export function useSwarmSimulation(args: {
   return {
     board,
     enemies,
+    projectiles,
     shipHp,
     status,
   };
