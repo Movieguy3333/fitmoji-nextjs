@@ -8,6 +8,7 @@ import { SwarmVillageLiveScene } from '@/components/swarm-village-live-scene';
 import type { SimControls } from '@/lib/swarm-village/sim/useSwarmSimulation';
 import type { BattleStatus } from '@/lib/swarm-village/sim/types';
 import type { SwarmVillageMapSnapshot } from '@/types/swarm-village';
+import { DEFAULT_WAVE_SIZE } from '../lib/swarm-village/sim/constants'
 
 type Props = {
   map: SwarmVillageMapSnapshot;
@@ -22,6 +23,10 @@ const DEFAULT_CONTROLS: SimControls = {
   ijomDamageMultiplier: 1.0,
   ijomHpMultiplier: 1.0,
   enemySpeedMultiplier: 1.0,
+  enemySpawnIntervalMs: 700,
+  waveSize: DEFAULT_WAVE_SIZE,
+  treeDamageMultiplier: 1.0,
+  treeHpMultiplier: 1.0,
 };
 
 export function VillagePageClient({
