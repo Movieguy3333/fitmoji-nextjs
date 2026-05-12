@@ -1,3 +1,4 @@
+// Swarm Village Foundation types
 export type SwarmVillageFoundation =
   | "grass"
   | "grass_path_a"

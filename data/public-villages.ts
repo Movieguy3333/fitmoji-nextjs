@@ -1,3 +1,4 @@
+// Village Gallery data
 import "server-only";
 
 import {
@@ -257,7 +258,9 @@ async function getStorageBackedVillageRecords(
     }),
   );
 
-  return records.filter((record): record is PublicVillageRecord => record !== null);
+  return records.filter(
+    (record): record is PublicVillageRecord => record !== null,
+  );
 }
 
 async function getSwarmVillageMapRecords(
@@ -291,9 +294,18 @@ async function getSwarmVillageMapRecords(
       }
 
       const screenshotPath =
-        getSafeBoardScreenshotPath(boardId, readString(mapData.previewImageStoragePath)) ??
-        getSafeBoardScreenshotPath(boardId, readString(mapData.coverImagePath)) ??
-        getSafeBoardScreenshotPath(boardId, readString(mapData.screenshotPath)) ??
+        getSafeBoardScreenshotPath(
+          boardId,
+          readString(mapData.previewImageStoragePath),
+        ) ??
+        getSafeBoardScreenshotPath(
+          boardId,
+          readString(mapData.coverImagePath),
+        ) ??
+        getSafeBoardScreenshotPath(
+          boardId,
+          readString(mapData.screenshotPath),
+        ) ??
         storageByUid.get(boardId)?.screenshotPath ??
         storageByUid.get(uid)?.screenshotPath ??
         (await findStorageScreenshotPathForUid(uid));
@@ -344,7 +356,10 @@ async function getSwarmVillageMapRecordById(
     }
 
     const screenshotPath =
-      getSafeBoardScreenshotPath(boardId, readString(mapData.previewImageStoragePath)) ??
+      getSafeBoardScreenshotPath(
+        boardId,
+        readString(mapData.previewImageStoragePath),
+      ) ??
       getSafeBoardScreenshotPath(boardId, readString(mapData.coverImagePath)) ??
       getSafeBoardScreenshotPath(boardId, readString(mapData.screenshotPath)) ??
       (await findStorageScreenshotPathForUid(boardId)) ??
@@ -661,7 +676,12 @@ function connectedStatus(
 }
 
 function isSafeUid(uid: string) {
-  return typeof uid === "string" && uid.length >= 3 && uid.length <= 128 && !uid.includes("/");
+  return (
+    typeof uid === "string" &&
+    uid.length >= 3 &&
+    uid.length <= 128 &&
+    !uid.includes("/")
+  );
 }
 
 function isSafeBoardId(id: string) {
