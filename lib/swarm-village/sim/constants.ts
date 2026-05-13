@@ -5,7 +5,9 @@ export const CASTLE_ROW_MIN = 0;
 export const CASTLE_ROW_MAX = 2;
 export const CASTLE_COL_MIN = SHIP_COL - 1;
 export const CASTLE_COL_MAX = SHIP_COL + 1;
-export const CASTLE_TARGET_COL = Math.floor((CASTLE_COL_MIN + CASTLE_COL_MAX) / 2);
+export const CASTLE_TARGET_COL = Math.floor(
+  (CASTLE_COL_MIN + CASTLE_COL_MAX) / 2,
+);
 export const STARTER_HOME_ROW = CASTLE_ROW_MAX;
 export const STARTER_HOME_COL = CASTLE_TARGET_COL;
 
@@ -13,9 +15,13 @@ export const isStarterHomeCell = (r: number, c: number) =>
   r === STARTER_HOME_ROW && c === STARTER_HOME_COL;
 
 export const isCastleCell = (r: number, c: number) =>
-  r >= CASTLE_ROW_MIN && r <= CASTLE_ROW_MAX && c >= CASTLE_COL_MIN && c <= CASTLE_COL_MAX;
+  r >= CASTLE_ROW_MIN &&
+  r <= CASTLE_ROW_MAX &&
+  c >= CASTLE_COL_MIN &&
+  c <= CASTLE_COL_MAX;
 
-export const isHomeReservedCell = (r: number, c: number) => isStarterHomeCell(r, c);
+export const isHomeReservedCell = (r: number, c: number) =>
+  isStarterHomeCell(r, c);
 
 export const TILE_WIDTH = 74;
 export const TILE_HEIGHT = 38;
@@ -31,7 +37,6 @@ export const WALL_IJOM_DIVISOR = 2;
 export const WAVE_SIMULATION_INTERVAL_MS = 32;
 export const ENEMY_WALL_ATTACK_COOLDOWN_MS = 820;
 export const ENEMY_TREE_ATTACK_COOLDOWN_MS = 900;
-
 
 export const IJOM_MIN_DAMAGE = 6;
 export const IJOM_BASE_DAMAGE = 8;
@@ -52,6 +57,6 @@ export const IJOM_VILLAGE_DIFFICULTY_RAMP_DIVISOR = 1600;
 export const ENEMY_SPRITE_SIZE = 48;
 export const SNOW_IJOM_SPRITE_SCALE = 1.3;
 export const ENEMY_SPRITE_LEFT_OFFSET = 20;
-export const ENEMY_SPRITE_TOP_OFFSET = -15;
+export const ENEMY_SPRITE_TOP_OFFSET = 20;
 
 export const SNOW_WALL_SEEK_RANGE = 3;

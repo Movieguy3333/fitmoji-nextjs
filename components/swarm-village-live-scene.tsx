@@ -12,16 +12,15 @@ import type { SwarmVillageMapSnapshot } from "@/types/swarm-village";
 import {
   BOARD_TOP_INSET,
   ENEMY_SPRITE_SIZE,
+  ENEMY_SPRITE_LEFT_OFFSET,
+  ENEMY_SPRITE_TOP_OFFSET,
   SHIP_MAX_HP,
   SNOW_IJOM_SPRITE_SCALE,
   TILE_WIDTH,
 } from "@/lib/swarm-village/sim/constants";
 import type { SimControls } from "@/lib/swarm-village/sim/useSwarmSimulation";
 import { useSwarmSimulation } from "@/lib/swarm-village/sim/useSwarmSimulation";
-import type {
-  BattleStatus,
-  Enemy,
-} from "@/lib/swarm-village/sim/types";
+import type { BattleStatus, Enemy } from "@/lib/swarm-village/sim/types";
 
 type Props = {
   map: SwarmVillageMapSnapshot;
@@ -31,7 +30,6 @@ type Props = {
   className?: string;
   onStatusChange?: (status: BattleStatus) => void;
 };
-
 
 /** Convert absolute pixel position to % of boardWidth / boardHeight */
 function toPct(px: number, total: number): string {
@@ -45,8 +43,12 @@ function isoPos(
   col: number,
 ): { left: number; top: number } {
   return {
-    left: boardCenterX + (col - row) * (TILE_WIDTH / 2) - TILE_WIDTH / 2,
-    top: BOARD_TOP_INSET + (col + row) * (38 / 2), // HALF_H = 19
+    left:
+      boardCenterX +
+      (col - row) * (TILE_WIDTH / 2) -
+      TILE_WIDTH / 2 +
+      ENEMY_SPRITE_LEFT_OFFSET,
+    top: BOARD_TOP_INSET + (col + row) * (38 / 2) + ENEMY_SPRITE_TOP_OFFSET,
   };
 }
 
@@ -165,7 +167,6 @@ function EnemySprite({
     </>
   );
 }
-
 
 // ── Main component ────────────────────────────────────────────────────────────
 
@@ -364,8 +365,6 @@ export function SwarmVillageLiveScene({
             boardHeight={scene.boardHeight}
           />
         ))}
-
-
       </div>
     </div>
   );
