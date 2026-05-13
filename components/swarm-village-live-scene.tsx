@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useEffect, useRef } from "react";
 
 import {
   buildSwarmVillageScene,
@@ -32,9 +32,6 @@ type Props = {
   onStatusChange?: (status: BattleStatus) => void;
 };
 
-const ENEMY_FRAME_COUNT_NORMAL = 5;
-const ENEMY_FRAME_COUNT_SNOW = 6;
-const ENEMY_ANIM_INTERVAL_MS = 140;
 
 /** Convert absolute pixel position to % of boardWidth / boardHeight */
 function toPct(px: number, total: number): string {
@@ -117,20 +114,9 @@ function EnemySprite({
   boardWidth: number;
   boardHeight: number;
 }) {
-  const [frame, setFrame] = useState(0);
   const isSnow = enemy.variant === "snow";
-  const frameCount = isSnow ? ENEMY_FRAME_COUNT_SNOW : ENEMY_FRAME_COUNT_NORMAL;
 
-  useEffect(() => {
-    const id = setInterval(
-      () => setFrame((f) => (f + 1) % frameCount),
-      ENEMY_ANIM_INTERVAL_MS,
-    );
-    return () => clearInterval(id);
-  }, [frameCount]);
-
-  const prefix = isSnow ? "snow_ijom_smash" : "ijom_smash";
-  const src = `/swarm-village/sprites/${prefix}_${frame}.webp`;
+  const src = isSnow ? "/snow-ijom-walk.gif" : "/regular-ijom-walk.gif";
   const spriteSize = isSnow
     ? Math.round(ENEMY_SPRITE_SIZE * SNOW_IJOM_SPRITE_SCALE)
     : ENEMY_SPRITE_SIZE;
