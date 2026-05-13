@@ -112,6 +112,8 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
     onChange({ ...value, [key]: val });
 
   const fmtMult = (v: number) => `${v.toFixed(2)}×`;
+  const fmtMs = (v: number) => `${v.toFixed(0)}ms`;
+  const fmt = (v: number) => `${v.toFixed(0)}`;
 
   return (
     <div className="absolute right-5 top-5 z-[950] sm:right-8 sm:top-8">
@@ -145,8 +147,8 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
             className={`flex flex-col gap-3 transition-opacity ${swarmLocked ? 'pointer-events-none opacity-40' : ''}`}
           >
             <Slider
-              label="Damage multiplier"
-              sublabel="Trees &amp; enemies"
+              label="Ijom Damage multiplier"
+              sublabel="Enemies"
               value={value.ijomDamageMultiplier}
               min={0.25}
               max={3}
@@ -157,8 +159,8 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
             />
 
             <Slider
-              label="HP multiplier"
-              sublabel="Trees &amp; enemies"
+              label="Ijom HP multiplier"
+              sublabel="Enemies"
               value={value.ijomHpMultiplier}
               min={0.25}
               max={3}
@@ -167,17 +169,66 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
               onChange={(v) => set('ijomHpMultiplier', v)}
               disabled={swarmLocked}
             />
+            
+            <Slider
+              label="Tree Damage multiplier"
+              sublabel="Allies"
+              value={value.treeDamageMultiplier}
+              min={0.25}
+              max={3}
+              step={0.25}
+              display={fmtMult}
+              onChange={(v) => set('treeDamageMultiplier', v)}
+              disabled={swarmLocked}
+            />
+
+            
+            <Slider
+              label="Tree HP multiplier"
+              sublabel="Allies"
+              value={value.treeHpMultiplier}
+              min={0.25}
+              max={3}
+              step={0.25}
+              display={fmtMult}
+              onChange={(v) => set('treeHpMultiplier', v)}
+              disabled={swarmLocked}
+            />
 
             <Slider
               label="Enemy speed"
               value={value.enemySpeedMultiplier}
               min={0.25}
-              max={3}
+              max={5}
               step={0.25}
               display={fmtMult}
               onChange={(v) => set('enemySpeedMultiplier', v)}
               disabled={swarmLocked}
             />
+
+            <Slider
+              label="Enemy spawn interval"
+              value={value.enemySpawnIntervalMs}
+              min={0}
+              max={3000}
+              step={50}
+              display={fmtMs}
+              onChange={(v) => set('enemySpawnIntervalMs', v)}
+              disabled={swarmLocked}
+            />
+
+            <Slider
+              label="Wave size"
+              value={value.waveSize}
+              min={1}
+              max={99}
+              step={1}
+              display={fmt}
+              onChange={(v) => set('waveSize', v)}
+              disabled={swarmLocked}
+            />
+
+            
           </div>
         </div>
       )}
