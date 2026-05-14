@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import { useMemo, useEffect, useRef } from "react";
 
+import { getWallMaxHp } from "@/lib/swarm-village/sim/units";
 import {
   buildSwarmVillageScene,
   SWARM_VILLAGE_DEFAULT_AVATAR_ASSET,
@@ -22,10 +23,7 @@ import {
 } from "@/lib/swarm-village/sim/constants";
 import type { SimControls } from "@/lib/swarm-village/sim/useSwarmSimulation";
 import { useSwarmSimulation } from "@/lib/swarm-village/sim/useSwarmSimulation";
-import type {
-  BattleStatus,
-  Enemy,
-} from "@/lib/swarm-village/sim/types";
+import type { BattleStatus, Enemy } from "@/lib/swarm-village/sim/types";
 import type { Projectile } from "@/lib/swarm-village/sim/tree-combat";
 import {
   getFootballScreenAngle,
@@ -177,7 +175,6 @@ function EnemySprite({
     </>
   );
 }
-
 
 // ── Projectile sprite ─────────────────────────────────────────────────────────
 
@@ -492,7 +489,6 @@ export function SwarmVillageLiveScene({
             boardHeight={scene.boardHeight}
           />
         ))}
-
       </div>
     </div>
   );
