@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useEffect, useRef } from "react";
 
 import {
   buildSwarmVillageScene,
@@ -12,9 +12,12 @@ import type { SwarmVillageMapSnapshot } from "@/types/swarm-village";
 import {
   BOARD_TOP_INSET,
   ENEMY_SPRITE_SIZE,
+  ENEMY_SPRITE_LEFT_OFFSET,
+  ENEMY_SPRITE_TOP_OFFSET,
   HALF_H,
   SHIP_MAX_HP,
   SNOW_IJOM_SPRITE_SCALE,
+  TILE_HEIGHT,
   TILE_WIDTH,
 } from "@/lib/swarm-village/sim/constants";
 import type { SimControls } from "@/lib/swarm-village/sim/useSwarmSimulation";
@@ -38,10 +41,6 @@ type Props = {
   onStatusChange?: (status: BattleStatus) => void;
 };
 
-const ENEMY_FRAME_COUNT_NORMAL = 5;
-const ENEMY_FRAME_COUNT_SNOW = 6;
-const ENEMY_ANIM_INTERVAL_MS = 140;
-
 /** Convert absolute pixel position to % of boardWidth / boardHeight */
 function toPct(px: number, total: number): string {
   return `${((px / total) * 100).toFixed(4)}%`;
@@ -54,8 +53,12 @@ function isoPos(
   col: number,
 ): { left: number; top: number } {
   return {
-    left: boardCenterX + (col - row) * (TILE_WIDTH / 2) - TILE_WIDTH / 2,
-    top: BOARD_TOP_INSET + (col + row) * (38 / 2), // HALF_H = 19
+    left:
+      boardCenterX +
+      (col - row) * (TILE_WIDTH / 2) -
+      TILE_WIDTH / 2 +
+      ENEMY_SPRITE_LEFT_OFFSET,
+    top: BOARD_TOP_INSET + (col + row) * HALF_H + ENEMY_SPRITE_TOP_OFFSET,
   };
 }
 
@@ -71,7 +74,7 @@ function toEntityStyle(
   return {
     position: "absolute",
     left: toPct(pos.left - spriteW / 2 + TILE_WIDTH / 2, boardWidth),
-    top: toPct(pos.top - spriteH, boardHeight),
+    top: toPct(pos.top + HALF_H - spriteH, boardHeight),
     width: toPct(spriteW, boardWidth),
     height: toPct(spriteH, boardHeight),
     zIndex,
@@ -123,20 +126,9 @@ function EnemySprite({
   boardWidth: number;
   boardHeight: number;
 }) {
-  const [frame, setFrame] = useState(0);
   const isSnow = enemy.variant === "snow";
-  const frameCount = isSnow ? ENEMY_FRAME_COUNT_SNOW : ENEMY_FRAME_COUNT_NORMAL;
 
-  useEffect(() => {
-    const id = setInterval(
-      () => setFrame((f) => (f + 1) % frameCount),
-      ENEMY_ANIM_INTERVAL_MS,
-    );
-    return () => clearInterval(id);
-  }, [frameCount]);
-
-  const prefix = isSnow ? "snow_ijom_smash" : "ijom_smash";
-  const src = `/swarm-village/sprites/${prefix}_${frame}.webp`;
+  const src = isSnow ? "/snow-ijom-walk.gif" : "/regular-ijom-walk.gif";
   const spriteSize = isSnow
     ? Math.round(ENEMY_SPRITE_SIZE * SNOW_IJOM_SPRITE_SCALE)
     : ENEMY_SPRITE_SIZE;
@@ -329,6 +321,11 @@ export function SwarmVillageLiveScene({
   const UNIT_HP_BAR_H = 5;
   const UNIT_HP_BAR_GAP = 3;
 
+  // HP bar dimensions (board-px) for wall overlays
+  const WALL_HP_BAR_W = 30;
+  const WALL_HP_BAR_H = 5;
+  const WALL_HP_BAR_GAP = 3;
+
   return (
     <div
       aria-label={label}
@@ -406,6 +403,47 @@ export function SwarmVillageLiveScene({
                 }}
               >
                 <HpBar hp={cell.unitHp} maxHp={cell.unitMaxHp} />
+              </div>
+            );
+          })}
+
+        {/* Wall HP bars — rendered above the topmost wall sprite for each cell */}
+        {scene.sprites
+          .filter((s) => s.id.startsWith("w-"))
+          .map((sprite) => {
+            const parts = sprite.id.split("-");
+            const row = parseInt(parts[1]!, 10);
+            const col = parseInt(parts[2]!, 10);
+            const level = parseInt(parts[3]!, 10);
+            const cell = sim.board[row * map.gridCols + col];
+
+            if (!cell || cell.wallHeight <= 0) return null;
+            // Only render the bar once per cell — above the topmost wall level
+            if (level !== cell.wallHeight) return null;
+
+            const wallMaxHp = getWallMaxHp(cell.wallType);
+            if (wallMaxHp <= 0) return null;
+
+            // Show bar when: damaged at any time, OR during active wave (shows full green bar)
+            const hasDamage = cell.wallHp < wallMaxHp;
+            if (!hasDamage && sim.status !== "wave") return null;
+
+            const barLeft = sprite.left + (sprite.width - WALL_HP_BAR_W) / 2;
+            const barTop = sprite.top - WALL_HP_BAR_H - WALL_HP_BAR_GAP;
+
+            return (
+              <div
+                key={`hp-w-${row}-${col}`}
+                style={{
+                  position: "absolute",
+                  left: toPct(barLeft, scene.boardWidth),
+                  top: toPct(barTop, scene.boardHeight),
+                  width: toPct(WALL_HP_BAR_W, scene.boardWidth),
+                  zIndex: 100 + Math.round(sprite.sortOrder) + 1,
+                  pointerEvents: "none",
+                }}
+              >
+                <HpBar hp={cell.wallHp} maxHp={wallMaxHp} />
               </div>
             );
           })}

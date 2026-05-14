@@ -11,7 +11,7 @@ The app can read the existing live map collection:
 SwarmVillageMaps/{mapId}
 ```
 
-The gallery preserves `mapId` in the click-through URL:
+The gallery preserves `mapId` in the click through URL:
 
 ```txt
 /village/{mapId}

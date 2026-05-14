@@ -25,17 +25,29 @@ import { randomIntBetween } from "./utils";
 // Internal sim parameters not exposed as user controls
 const INTERNAL_WAVE_SIZE = DEFAULT_WAVE_SIZE;
 const SNOW_IJOM_SPAWN_CHANCE = 0.2;
-const INTERNAL_SPAWN_INTERVAL_MS = 700;
+const INTERNAL_SPAWN_INTERVAL_MS = 700; // replaced 
 const CASTLE_DAMAGE_BASE = 14;
 
 export type SimControls = {
   isSwarmActive: boolean;
-  /** Scales attack damage for both enemies (vs units/castle) and combative trees. */
+  /** Scales attack damage for enemies */
   ijomDamageMultiplier: number;
-  /** Scales max HP for both enemies and combative tree units. */
+  /** Scales max HP for enemies*/
   ijomHpMultiplier: number;
   /** Scales enemy movement speed. */
   enemySpeedMultiplier: number;
+  /** Scales enemy spawn time interval. */
+  enemySpawnIntervalMs: number;
+  
+  /** */
+  waveSize: number;
+
+  /*not used*/
+  /** Scales attack damage for combat trees */
+  treeDamageMultiplier: number;
+  /** Scales max HP for combative trees. */
+  treeHpMultiplier: number;
+  
 };
 
 let enemyIdCounter = 0;
@@ -120,6 +132,7 @@ export function useSwarmSimulation(args: {
   const boardRef = useRef<SwarmVillageBoardCell[]>(
     makeFreshBoard(initialBoard),
   );
+  const initialBoardRef = useRef<SwarmVillageBoardCell[]>(initialBoard);
   const enemiesRef = useRef<Enemy[]>([]);
   const projectilesRef = useRef<Projectile[]>([]);
   const lastSpawnAtRef = useRef<number>(0);
@@ -135,6 +148,7 @@ export function useSwarmSimulation(args: {
 
   // Rebuild board ref when initialBoard changes (e.g. different village loaded)
   useEffect(() => {
+    initialBoardRef.current = initialBoard;
     boardRef.current = makeFreshBoard(initialBoard);
     enemiesRef.current = [];
     projectilesRef.current = [];
@@ -179,13 +193,15 @@ export function useSwarmSimulation(args: {
           shipHpRef.current = SHIP_MAX_HP;
           setShipHp(SHIP_MAX_HP);
           waveSpawnedRef.current = 0;
+          boardRef.current = makeFreshBoard(initialBoardRef.current);
+          setBoard(boardRef.current);
         }
         return;
       }
 
       // ── isSwarmActive off: drain enemies ─────────────────────
       if (!ctrl.isSwarmActive) {
-        if (ens.length > 0 || projectilesRef.current.length > 0) {
+        if (ens.length > 0 || statusRef.current === "wave") {
           ens = [];
           ws = 0;
           hp = SHIP_MAX_HP;
@@ -196,6 +212,8 @@ export function useSwarmSimulation(args: {
           setEnemies([]);
           setProjectiles([]);
           setShipHp(hp);
+          boardRef.current = makeFreshBoard(initialBoardRef.current);
+          setBoard(boardRef.current);
           if (statusRef.current !== "ready") {
             statusRef.current = "ready";
             setStatus("ready");
@@ -217,9 +235,9 @@ export function useSwarmSimulation(args: {
 
       // ── Spawn ─────────────────────────────────────────────────
       if (
-        ws < INTERNAL_WAVE_SIZE &&
-        ens.length < INTERNAL_WAVE_SIZE &&
-        now - lastSpawnAtRef.current >= INTERNAL_SPAWN_INTERVAL_MS
+        ws < ctrl.waveSize &&
+        ens.length < ctrl.waveSize &&
+        now - lastSpawnAtRef.current >= ctrl.enemySpawnIntervalMs
       ) {
         const enemy = spawnEnemy(
           ens,
@@ -329,15 +347,19 @@ export function useSwarmSimulation(args: {
         projectilesRef.current = [];
         setEnemies([]);
         setProjectiles([]);
+        boardRef.current = makeFreshBoard(initialBoardRef.current);
+        setBoard(boardRef.current);
         return;
       }
       if (
-        ws >= INTERNAL_WAVE_SIZE &&
+        ws >= ctrl.waveSize &&
         ens.length === 0 &&
         statusRef.current === "wave"
       ) {
         statusRef.current = "cleared";
         setStatus("cleared");
+        boardRef.current = makeFreshBoard(initialBoardRef.current);
+        setBoard(boardRef.current);
         return;
       }
     }, WAVE_SIMULATION_INTERVAL_MS);

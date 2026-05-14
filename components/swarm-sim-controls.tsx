@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
-import type { SimControls } from '@/lib/swarm-village/sim/useSwarmSimulation';
+import type { SimControls } from "@/lib/swarm-village/sim/useSwarmSimulation";
 
 type Props = {
   value: SimControls;
@@ -98,13 +98,13 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
       setOpen(false);
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKey);
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
     return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKey);
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
     };
   }, [open]);
 
@@ -112,25 +112,37 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
     onChange({ ...value, [key]: val });
 
   const fmtMult = (v: number) => `${v.toFixed(2)}×`;
+  const fmtMs = (v: number) => `${v.toFixed(0)}ms`;
+  const fmt = (v: number) => `${v.toFixed(0)}`;
 
   return (
-    <div className="absolute right-5 top-5 z-[950] sm:right-8 sm:top-8">
+    <div className="absolute right-5 top-5  sm:right-8 sm:top-8 flex flex-col items-end rounded-lg border border-white/45 bg-white/86 shadow-[0_14px_32px_rgba(8,16,24,0.18)] backdrop-blur-md">
       <button
         ref={buttonRef}
         type="button"
         aria-label="Simulation settings"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/45 bg-white/86 text-[#264653] shadow-[0_14px_32px_rgba(8,16,24,0.18)] backdrop-blur-md transition hover:bg-white"
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-[#264653] transition hover:bg-white/30"
       >
-        <GearIcon />
+        <span
+          className={`inline-block transition-transform duration-800 ease-out ${
+            open ? "rotate-180" : "rotate-0"
+          }`}
+        >
+          <GearIcon />
+        </span>
       </button>
 
-      {open && (
-        <div
-          ref={panelRef}
-          className="absolute right-0 top-11 w-72 rounded-lg border border-white/45 bg-[#fffefa]/88 p-4 shadow-[0_24px_70px_rgba(8,16,24,0.22)] backdrop-blur-md"
-        >
+      <div
+        aria-hidden={!open}
+        className={`overflow-hidden transition-all duration-500 ease-out ${
+          open
+            ? "max-h-[800px] w-72 opacity-100"
+            : "pointer-events-none max-h-0 w-0 opacity-0"
+        }`}
+      >
+        <div ref={panelRef} className="w-72 p-4">
           <p className="mb-3 text-[0.65rem] font-black uppercase tracking-[0.2em] text-[#e76f51]">
             Simulation Controls
           </p>
@@ -142,29 +154,53 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
           )}
 
           <div
-            className={`flex flex-col gap-3 transition-opacity ${swarmLocked ? 'pointer-events-none opacity-40' : ''}`}
+            className={`flex flex-col gap-3 transition-opacity ${swarmLocked ? "pointer-events-none opacity-40" : ""}`}
           >
             <Slider
-              label="Damage multiplier"
-              sublabel="Trees &amp; enemies"
+              label="Ijom Damage multiplier"
+              sublabel="Enemies"
               value={value.ijomDamageMultiplier}
               min={0.25}
               max={3}
               step={0.25}
               display={fmtMult}
-              onChange={(v) => set('ijomDamageMultiplier', v)}
+              onChange={(v) => set("ijomDamageMultiplier", v)}
               disabled={swarmLocked}
             />
 
             <Slider
-              label="HP multiplier"
-              sublabel="Trees &amp; enemies"
+              label="Ijom HP multiplier"
+              sublabel="Enemies"
               value={value.ijomHpMultiplier}
               min={0.25}
               max={3}
               step={0.25}
               display={fmtMult}
-              onChange={(v) => set('ijomHpMultiplier', v)}
+              onChange={(v) => set("ijomHpMultiplier", v)}
+              disabled={swarmLocked}
+            />
+
+            <Slider
+              label="Tree Damage multiplier"
+              sublabel="Allies"
+              value={value.treeDamageMultiplier}
+              min={0.25}
+              max={3}
+              step={0.25}
+              display={fmtMult}
+              onChange={(v) => set("treeDamageMultiplier", v)}
+              disabled={swarmLocked}
+            />
+
+            <Slider
+              label="Tree HP multiplier"
+              sublabel="Allies"
+              value={value.treeHpMultiplier}
+              min={0.25}
+              max={3}
+              step={0.25}
+              display={fmtMult}
+              onChange={(v) => set("treeHpMultiplier", v)}
               disabled={swarmLocked}
             />
 
@@ -172,15 +208,37 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
               label="Enemy speed"
               value={value.enemySpeedMultiplier}
               min={0.25}
-              max={3}
+              max={5}
               step={0.25}
               display={fmtMult}
-              onChange={(v) => set('enemySpeedMultiplier', v)}
+              onChange={(v) => set("enemySpeedMultiplier", v)}
+              disabled={swarmLocked}
+            />
+
+            <Slider
+              label="Enemy spawn interval"
+              value={value.enemySpawnIntervalMs}
+              min={0}
+              max={3000}
+              step={50}
+              display={fmtMs}
+              onChange={(v) => set("enemySpawnIntervalMs", v)}
+              disabled={swarmLocked}
+            />
+
+            <Slider
+              label="Wave size"
+              value={value.waveSize}
+              min={1}
+              max={99}
+              step={1}
+              display={fmt}
+              onChange={(v) => set("waveSize", v)}
               disabled={swarmLocked}
             />
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
