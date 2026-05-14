@@ -126,6 +126,7 @@ export function useSwarmSimulation(args: {
   const boardRef = useRef<SwarmVillageBoardCell[]>(
     makeFreshBoard(initialBoard),
   );
+  const initialBoardRef = useRef<SwarmVillageBoardCell[]>(initialBoard);
   const enemiesRef = useRef<Enemy[]>([]);
   const lastSpawnAtRef = useRef<number>(0);
   const shipHpRef = useRef<number>(SHIP_MAX_HP);
@@ -139,6 +140,7 @@ export function useSwarmSimulation(args: {
 
   // Rebuild board ref when initialBoard changes (e.g. different village loaded)
   useEffect(() => {
+    initialBoardRef.current = initialBoard;
     boardRef.current = makeFreshBoard(initialBoard);
     enemiesRef.current = [];
     lastSpawnAtRef.current = 0;
@@ -181,13 +183,15 @@ export function useSwarmSimulation(args: {
           shipHpRef.current = SHIP_MAX_HP;
           setShipHp(SHIP_MAX_HP);
           waveSpawnedRef.current = 0;
+          boardRef.current = makeFreshBoard(initialBoardRef.current);
+          setBoard(boardRef.current);
         }
         return;
       }
 
       // ── isSwarmActive off: drain enemies ─────────────────────
       if (!ctrl.isSwarmActive) {
-        if (ens.length > 0) {
+        if (ens.length > 0 || statusRef.current === "wave") {
           ens = [];
           ws = 0;
           hp = SHIP_MAX_HP;
@@ -196,6 +200,8 @@ export function useSwarmSimulation(args: {
           enemiesRef.current = ens;
           setEnemies([]);
           setShipHp(hp);
+          boardRef.current = makeFreshBoard(initialBoardRef.current);
+          setBoard(boardRef.current);
           if (statusRef.current !== "ready") {
             statusRef.current = "ready";
             setStatus("ready");
@@ -292,6 +298,8 @@ export function useSwarmSimulation(args: {
         setStatus("lost");
         enemiesRef.current = [];
         setEnemies([]);
+        boardRef.current = makeFreshBoard(initialBoardRef.current);
+        setBoard(boardRef.current);
         return;
       }
       if (
@@ -301,6 +309,8 @@ export function useSwarmSimulation(args: {
       ) {
         statusRef.current = "cleared";
         setStatus("cleared");
+        boardRef.current = makeFreshBoard(initialBoardRef.current);
+        setBoard(boardRef.current);
         return;
       }
     }, WAVE_SIMULATION_INTERVAL_MS);

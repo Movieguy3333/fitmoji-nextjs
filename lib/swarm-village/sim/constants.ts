@@ -56,7 +56,7 @@ export const IJOM_VILLAGE_DIFFICULTY_RAMP_DIVISOR = 1600;
 
 export const ENEMY_SPRITE_SIZE = 48;
 export const SNOW_IJOM_SPRITE_SCALE = 1.3;
-export const ENEMY_SPRITE_LEFT_OFFSET = 20;
-export const ENEMY_SPRITE_TOP_OFFSET = 20;
+export const ENEMY_SPRITE_LEFT_OFFSET = 8;
+export const ENEMY_SPRITE_TOP_OFFSET = 8;
 
 export const SNOW_WALL_SEEK_RANGE = 3;

@@ -14,8 +14,10 @@ import {
   ENEMY_SPRITE_SIZE,
   ENEMY_SPRITE_LEFT_OFFSET,
   ENEMY_SPRITE_TOP_OFFSET,
+  HALF_H,
   SHIP_MAX_HP,
   SNOW_IJOM_SPRITE_SCALE,
+  TILE_HEIGHT,
   TILE_WIDTH,
 } from "@/lib/swarm-village/sim/constants";
 import type { SimControls } from "@/lib/swarm-village/sim/useSwarmSimulation";
@@ -49,7 +51,7 @@ function isoPos(
       (col - row) * (TILE_WIDTH / 2) -
       TILE_WIDTH / 2 +
       ENEMY_SPRITE_LEFT_OFFSET,
-    top: BOARD_TOP_INSET + (col + row) * (38 / 2) + ENEMY_SPRITE_TOP_OFFSET,
+    top: BOARD_TOP_INSET + (col + row) * HALF_H + ENEMY_SPRITE_TOP_OFFSET,
   };
 }
 
@@ -65,7 +67,7 @@ function toEntityStyle(
   return {
     position: "absolute",
     left: toPct(pos.left - spriteW / 2 + TILE_WIDTH / 2, boardWidth),
-    top: toPct(pos.top - spriteH, boardHeight),
+    top: toPct(pos.top + HALF_H - spriteH, boardHeight),
     width: toPct(spriteW, boardWidth),
     height: toPct(spriteH, boardHeight),
     zIndex,
