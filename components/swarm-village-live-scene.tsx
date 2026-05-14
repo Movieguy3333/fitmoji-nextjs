@@ -21,6 +21,7 @@ import {
 import type { SimControls } from "@/lib/swarm-village/sim/useSwarmSimulation";
 import { useSwarmSimulation } from "@/lib/swarm-village/sim/useSwarmSimulation";
 import type { BattleStatus, Enemy } from "@/lib/swarm-village/sim/types";
+import { getWallMaxHp } from "@/lib/swarm-village/sim/units";
 
 type Props = {
   map: SwarmVillageMapSnapshot;
@@ -251,6 +252,11 @@ export function SwarmVillageLiveScene({
   const UNIT_HP_BAR_H = 5;
   const UNIT_HP_BAR_GAP = 3;
 
+  // HP bar dimensions (board-px) for wall overlays
+  const WALL_HP_BAR_W = 30;
+  const WALL_HP_BAR_H = 5;
+  const WALL_HP_BAR_GAP = 3;
+
   return (
     <div
       aria-label={label}
@@ -328,6 +334,47 @@ export function SwarmVillageLiveScene({
                 }}
               >
                 <HpBar hp={cell.unitHp} maxHp={cell.unitMaxHp} />
+              </div>
+            );
+          })}
+
+        {/* Wall HP bars — rendered above the topmost wall sprite for each cell */}
+        {scene.sprites
+          .filter((s) => s.id.startsWith("w-"))
+          .map((sprite) => {
+            const parts = sprite.id.split("-");
+            const row = parseInt(parts[1]!, 10);
+            const col = parseInt(parts[2]!, 10);
+            const level = parseInt(parts[3]!, 10);
+            const cell = sim.board[row * map.gridCols + col];
+
+            if (!cell || cell.wallHeight <= 0) return null;
+            // Only render the bar once per cell — above the topmost wall level
+            if (level !== cell.wallHeight) return null;
+
+            const wallMaxHp = getWallMaxHp(cell.wallType);
+            if (wallMaxHp <= 0) return null;
+
+            // Show bar when: damaged at any time, OR during active wave (shows full green bar)
+            const hasDamage = cell.wallHp < wallMaxHp;
+            if (!hasDamage && sim.status !== "wave") return null;
+
+            const barLeft = sprite.left + (sprite.width - WALL_HP_BAR_W) / 2;
+            const barTop = sprite.top - WALL_HP_BAR_H - WALL_HP_BAR_GAP;
+
+            return (
+              <div
+                key={`hp-w-${row}-${col}`}
+                style={{
+                  position: "absolute",
+                  left: toPct(barLeft, scene.boardWidth),
+                  top: toPct(barTop, scene.boardHeight),
+                  width: toPct(WALL_HP_BAR_W, scene.boardWidth),
+                  zIndex: 100 + Math.round(sprite.sortOrder) + 1,
+                  pointerEvents: "none",
+                }}
+              >
+                <HpBar hp={cell.wallHp} maxHp={wallMaxHp} />
               </div>
             );
           })}
