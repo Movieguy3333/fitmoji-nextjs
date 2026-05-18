@@ -1,14 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { SwarmSimControls } from '@/components/swarm-sim-controls';
 import { SwarmVillageLiveScene } from '@/components/swarm-village-live-scene';
+import { SwarmPlacementToolbar } from '@/components/swarm-placement-toolbar';
+import type { PlacementTool } from '@/components/swarm-placement-toolbar';
 import type { SimControls } from '@/lib/swarm-village/sim/useSwarmSimulation';
 import type { BattleStatus } from '@/lib/swarm-village/sim/types';
-import type { SwarmVillageMapSnapshot } from '@/types/swarm-village';
-import { DEFAULT_WAVE_SIZE } from '../lib/swarm-village/sim/constants'
+import { isCastleCell, isHomeReservedCell, DEFAULT_WAVE_SIZE } from '@/lib/swarm-village/sim/constants';
+import { getUnitMaxHp, getWallMaxHp } from '@/lib/swarm-village/sim/units';
+import type { SwarmVillageBoardCell, SwarmVillageMapSnapshot } from '@/types/swarm-village';
 
 type Props = {
   map: SwarmVillageMapSnapshot;
@@ -39,6 +42,11 @@ export function VillagePageClient({
 }: Props) {
   const [controls, setControls] = useState<SimControls>(DEFAULT_CONTROLS);
   const [swarmStatus, setSwarmStatus] = useState<BattleStatus>('ready');
+  const [tool, setTool] = useState<PlacementTool>(null);
+  const [placedKeys, setPlacedKeys] = useState<Set<string>>(() => new Set());
+  const [editedBoard, setEditedBoard] = useState<SwarmVillageBoardCell[]>(
+    () => map.board.map((c) => ({ ...c })),
+  );
 
   const swarmLocked = swarmStatus === 'wave';
 
@@ -55,15 +63,123 @@ export function VillagePageClient({
     }
   }
 
+  const handleTilePlace = useCallback(
+    (row: number, col: number) => {
+      if (swarmStatus !== 'ready' || !tool) return;
+
+      if (isCastleCell(row, col) || isHomeReservedCell(row, col)) return;
+
+      const idx = row * map.gridCols + col;
+      const origCell = map.board[idx];
+      if (!origCell || origCell.foundation === false) return;
+
+      const key = `${row}-${col}`;
+
+      if (tool === 'delete') {
+        if (!placedKeys.has(key)) return;
+        setEditedBoard((prev) => {
+          const next = [...prev];
+          next[idx] = { ...map.board[idx]! };
+          return next;
+        });
+        setPlacedKeys((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+        return;
+      }
+
+      // Unit/wall placement: original cell must be empty
+      if (origCell.unit !== null || origCell.wallHeight > 0) return;
+
+      const isUnitTool = tool !== 'wall_stone' && tool !== 'wall_wood';
+      const currentCell = editedBoard[idx];
+
+      // Block unit placement on top of a player-placed wall
+      if (isUnitTool && currentCell && currentCell.wallHeight > 0) return;
+      // Block wall placement on top of a player-placed unit
+      if (!isUnitTool && currentCell && currentCell.unit !== null) return;
+
+      setEditedBoard((prev) => {
+        const next = [...prev];
+        const cell = prev[idx]!;
+        if (tool === 'wall_stone' || tool === 'wall_wood') {
+          const wallType = tool === 'wall_stone' ? 'stone' : 'wood';
+          const wallMax = getWallMaxHp(wallType);
+          next[idx] = {
+            ...cell,
+            wallType,
+            wallHeight: 1,
+            wallHp: wallMax,
+            wallRotation: 0,
+          };
+        } else {
+          const unit = tool as 'boxer' | 'tennis' | 'quarterback';
+          const maxHp = getUnitMaxHp(unit, 1);
+          next[idx] = {
+            ...cell,
+            unit,
+            unitLevel: 1,
+            unitHp: maxHp,
+            unitMaxHp: maxHp,
+            unitLastAttackAt: 0,
+            unitFacingScaleX: 1,
+            unitRotation: 0,
+            unitRewardBaselineCompletionCount: null,
+          };
+        }
+        return next;
+      });
+
+      setPlacedKeys((prev) => new Set(prev).add(key));
+    },
+    [swarmStatus, tool, placedKeys, map.board, map.gridCols, editedBoard],
+  );
+
+  function handleResetPlacements() {
+    setEditedBoard(map.board.map((c) => ({ ...c })));
+    setPlacedKeys(new Set());
+  }
+
+  const hoverTintForTile = useCallback(
+    (row: number, col: number): 'legal' | 'illegal' | null => {
+      if (!tool) return null;
+      if (swarmStatus !== 'ready') return null;
+
+      if (isCastleCell(row, col) || isHomeReservedCell(row, col)) return 'illegal';
+
+      const origCell = map.board[row * map.gridCols + col];
+      if (!origCell || origCell.foundation === false) return 'illegal';
+
+      if (tool === 'delete') {
+        return placedKeys.has(`${row}-${col}`) ? 'legal' : 'illegal';
+      }
+
+      if (origCell.unit !== null || origCell.wallHeight > 0) return 'illegal';
+
+      const isUnitTool = tool !== 'wall_stone' && tool !== 'wall_wood';
+      const currentCell = editedBoard[row * map.gridCols + col];
+
+      if (isUnitTool && currentCell && currentCell.wallHeight > 0) return 'illegal';
+      if (!isUnitTool && currentCell && currentCell.unit !== null) return 'illegal';
+
+      return 'legal';
+    },
+    [tool, swarmStatus, placedKeys, map.board, map.gridCols, editedBoard],
+  );
+
   return (
     <>
       <SwarmVillageLiveScene
-        map={map}
+        map={{ ...map, board: editedBoard }}
         playerAvatarUrl={playerAvatarUrl}
         playerName={playerName}
         controls={controls}
         className="absolute inset-0"
         onStatusChange={handleSwarmStatusChange}
+        onTileClick={handleTilePlace}
+        hoverTintForTile={hoverTintForTile}
       />
 
       <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-[#081018]/42 via-transparent to-[#081018]/16" />
@@ -81,6 +197,13 @@ export function VillagePageClient({
         value={controls}
         onChange={setControls}
         swarmLocked={swarmLocked}
+      />
+
+      <SwarmPlacementToolbar
+        tool={tool}
+        onToolChange={setTool}
+        onReset={handleResetPlacements}
+        disabled={swarmStatus !== 'ready'}
       />
 
       <section className="absolute inset-x-4 bottom-4 z-[900] sm:inset-x-8 sm:bottom-8">

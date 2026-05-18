@@ -1,3 +1,5 @@
+// Village Page
+
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
