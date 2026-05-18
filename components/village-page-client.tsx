@@ -27,7 +27,7 @@ const DEFAULT_CONTROLS: SimControls = {
   ijomHpMultiplier: 1.0,
   enemySpeedMultiplier: 1.0,
   enemySpawnIntervalMs: 700,
-  waveSize: DEFAULT_WAVE_SIZE,
+  snowIjomSpawnChance: .2,
   streakCount: 0,
   treeDamageMultiplier: 1.0,
   treeHpMultiplier: 1.0,

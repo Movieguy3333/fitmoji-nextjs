@@ -39,8 +39,8 @@ export type SimControls = {
   /** Scales enemy spawn time interval. */
   enemySpawnIntervalMs: number;
   
-  /** wave size - depricated*/
-  waveSize: number;
+  /** chance of spawning a snow Ijom*/
+  snowIjomSpawnChance: number;
   /** */
   streakCount: number;
 
@@ -87,9 +87,10 @@ function spawnEnemy(
   ijomDamageMultiplier: number,
   ijomHpMultiplier: number,
   speedMultiplier: number,
+  snowIjomSpawnChance: number,
 ): Enemy | null {
   const variant: "normal" | "snow" =
-    Math.random() < SNOW_IJOM_SPAWN_CHANCE ? "snow" : "normal";
+    Math.random() < snowIjomSpawnChance ? "snow" : "normal";
   const pos = getEnemySpawnPosition(enemies, gridCols, variant);
   if (!pos) return null;
 
@@ -251,6 +252,7 @@ export function useSwarmSimulation(args: {
           ctrl.ijomDamageMultiplier,
           ctrl.ijomHpMultiplier,
           ctrl.enemySpeedMultiplier,
+          ctrl.snowIjomSpawnChance,
         );
         if (enemy) {
           ens = [...ens, enemy];
@@ -309,7 +311,7 @@ export function useSwarmSimulation(args: {
         enemies: ens,
         projectiles: projectilesRef.current,
         now,
-        damageMultiplier: ctrl.ijomDamageMultiplier,
+        damageMultiplier: ctrl.treeDamageMultiplier,
         nextProjectileId,
       });
 
