@@ -193,6 +193,8 @@ export function useSwarmSimulation(args: {
           shipHpRef.current = SHIP_MAX_HP;
           setShipHp(SHIP_MAX_HP);
           waveSpawnedRef.current = 0;
+          projectilesRef.current = [];
+          setProjectiles([]);
           boardRef.current = makeFreshBoard(initialBoardRef.current);
           setBoard(boardRef.current);
         }
@@ -358,6 +360,8 @@ export function useSwarmSimulation(args: {
       ) {
         statusRef.current = "cleared";
         setStatus("cleared");
+        projectilesRef.current = [];
+        setProjectiles([]);
         boardRef.current = makeFreshBoard(initialBoardRef.current);
         setBoard(boardRef.current);
         return;

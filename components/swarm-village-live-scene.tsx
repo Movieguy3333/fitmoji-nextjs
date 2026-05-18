@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useMemo, useEffect, useRef } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 
 import { getWallMaxHp } from "@/lib/swarm-village/sim/units";
 import {
@@ -15,7 +15,9 @@ import {
   ENEMY_SPRITE_SIZE,
   ENEMY_SPRITE_LEFT_OFFSET,
   ENEMY_SPRITE_TOP_OFFSET,
+  GRID_ROWS,
   HALF_H,
+  HALF_W,
   SHIP_MAX_HP,
   SNOW_IJOM_SPRITE_SCALE,
   TILE_HEIGHT,
@@ -37,6 +39,8 @@ type Props = {
   controls: SimControls;
   className?: string;
   onStatusChange?: (status: BattleStatus) => void;
+  onTileClick?: (row: number, col: number) => void;
+  hoverTintForTile?: (row: number, col: number) => "legal" | "illegal" | null;
 };
 
 /** Convert absolute pixel position to % of boardWidth / boardHeight */
@@ -237,6 +241,29 @@ function ProjectileSprite({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+function pointerToCell(
+  ev: { clientX: number; clientY: number },
+  boardEl: HTMLDivElement,
+  boardWidth: number,
+  boardHeight: number,
+  boardCenterX: number,
+  gridCols: number,
+): { row: number; col: number } | null {
+  const rect = boardEl.getBoundingClientRect();
+  const px = ((ev.clientX - rect.left) / rect.width) * boardWidth;
+  const py = ((ev.clientY - rect.top) / rect.height) * boardHeight;
+
+  const u = (px - boardCenterX) / HALF_W;
+  const v = (py - BOARD_TOP_INSET - HALF_H * 0.2) / HALF_H;
+
+  const col = Math.floor((u + v) / 2);
+  const row = Math.floor((v - u) / 2);
+
+  if (row < 0 || row >= GRID_ROWS) return null;
+  if (col < 0 || col >= gridCols) return null;
+  return { row, col };
+}
+
 export function SwarmVillageLiveScene({
   map,
   playerAvatarUrl,
@@ -244,12 +271,20 @@ export function SwarmVillageLiveScene({
   controls,
   className = "",
   onStatusChange,
+  onTileClick,
+  hoverTintForTile,
 }: Props) {
   const sim = useSwarmSimulation({
     initialBoard: map.board,
     gridCols: map.gridCols,
     controls,
   });
+
+  const boardDivRef = useRef<HTMLDivElement>(null);
+  const [hoveredCell, setHoveredCell] = useState<{
+    row: number;
+    col: number;
+  } | null>(null);
 
   // Notify parent when battle status changes
   const prevStatusRef = useRef<BattleStatus>("ready");
@@ -293,6 +328,7 @@ export function SwarmVillageLiveScene({
       transform: sprite.flipX ? "scaleX(-1)" : undefined,
       transformOrigin: "center bottom",
       objectFit: "contain",
+      pointerEvents: "none",
     };
   }
 
@@ -310,6 +346,7 @@ export function SwarmVillageLiveScene({
       width: toPct(layer.width, scene.boardWidth),
       height: toPct(layer.height, scene.boardHeight),
       zIndex: layer.zIndex,
+      pointerEvents: "none",
     };
   }
 
@@ -334,7 +371,7 @@ export function SwarmVillageLiveScene({
 
       {/* Castle HP bar — shown whenever a wave is in progress or just finished */}
       {sim.status !== "ready" && (
-        <div className="absolute left-8 top-25 z-[950] flex flex-col gap-1.5 rounded-md border border-white/30 bg-[#081018]/55 px-3 py-2 backdrop-blur-sm">
+        <div className="absolute left-72 top-25 z-[950] flex flex-col gap-1.5 rounded-md border border-white/30 bg-[#081018]/55 px-3 py-2 backdrop-blur-sm">
           <div className="flex items-center justify-between gap-4">
             <span className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/80">
               Castle
@@ -350,10 +387,37 @@ export function SwarmVillageLiveScene({
       )}
 
       <div
+        ref={boardDivRef}
         className="absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2"
         style={{
           aspectRatio: `${scene.boardWidth} / ${scene.boardHeight}`,
           width: `min(132vw, ${viewerWidthByHeight})`,
+          cursor: hoverTintForTile && onTileClick ? "crosshair" : undefined,
+        }}
+        onPointerMove={(ev) => {
+          if (!boardDivRef.current || !hoverTintForTile) return;
+          const cell = pointerToCell(
+            ev,
+            boardDivRef.current,
+            scene.boardWidth,
+            scene.boardHeight,
+            scene.boardCenterX,
+            map.gridCols,
+          );
+          setHoveredCell(cell);
+        }}
+        onPointerLeave={() => setHoveredCell(null)}
+        onClick={(ev) => {
+          if (!boardDivRef.current || !onTileClick) return;
+          const cell = pointerToCell(
+            ev,
+            boardDivRef.current,
+            scene.boardWidth,
+            scene.boardHeight,
+            scene.boardCenterX,
+            map.gridCols,
+          );
+          if (cell) onTileClick(cell.row, cell.col);
         }}
       >
         {/* Static terrain / walls / units */}
@@ -489,6 +553,42 @@ export function SwarmVillageLiveScene({
             boardHeight={scene.boardHeight}
           />
         ))}
+
+        {/* Hover highlight overlay — filter and clip-path on the same element so
+            drop-shadow traces the diamond edge instead of the bounding box */}
+        {hoveredCell &&
+          hoverTintForTile &&
+          (() => {
+            const tint = hoverTintForTile(hoveredCell.row, hoveredCell.col);
+            if (!tint) return null;
+            const left =
+              scene.boardCenterX +
+              (hoveredCell.col - hoveredCell.row) * HALF_W -
+              HALF_W;
+            const top =
+              BOARD_TOP_INSET + (hoveredCell.col + hoveredCell.row) * HALF_H;
+            const isLegal = tint === "legal";
+            return (
+              <div
+                style={{
+                  position: "absolute",
+                  left: toPct(left, scene.boardWidth),
+                  top: toPct(top, scene.boardHeight),
+                  width: toPct(TILE_WIDTH, scene.boardWidth),
+                  height: toPct(TILE_HEIGHT, scene.boardHeight),
+                  zIndex: 500,
+                  clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
+                  background: isLegal
+                    ? "rgba(42,157,143,0.28)"
+                    : "rgba(231,111,81,0.28)",
+                  filter: isLegal
+                    ? "drop-shadow(0 0 5px rgba(42,157,143,0.45)) drop-shadow(0 0 9px rgba(42,157,143,0.25))"
+                    : "drop-shadow(0 0 5px rgba(231,111,81,0.45)) drop-shadow(0 0 9px rgba(231,111,81,0.25))",
+                  pointerEvents: "none",
+                }}
+              />
+            );
+          })()}
       </div>
     </div>
   );
