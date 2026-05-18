@@ -25,6 +25,7 @@ const DEFAULT_CONTROLS: SimControls = {
   enemySpeedMultiplier: 1.0,
   enemySpawnIntervalMs: 700,
   waveSize: DEFAULT_WAVE_SIZE,
+  streakCount: 0,
   treeDamageMultiplier: 1.0,
   treeHpMultiplier: 1.0,
 };

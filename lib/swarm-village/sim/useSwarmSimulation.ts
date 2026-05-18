@@ -15,7 +15,7 @@ import {
   SHIP_MAX_HP,
   WAVE_SIMULATION_INTERVAL_MS,
 } from "./constants";
-import { getEnemySpawnPosition } from "./combat";
+import { getEnemySpawnPosition, getIncomingWaveSize } from "./combat";
 import { getPathCells, stepEnemy } from "./pathing";
 import type { BattleStatus, BoardPatch, Enemy } from "./types";
 import { randomIntBetween } from "./utils";
@@ -37,8 +37,10 @@ export type SimControls = {
   /** Scales enemy spawn time interval. */
   enemySpawnIntervalMs: number;
   
-  /** */
+  /** wave size - depricated*/
   waveSize: number;
+  /** */
+  streakCount: number;
 
   /*not used*/
   /** Scales attack damage for combat trees */
@@ -164,6 +166,7 @@ export function useSwarmSimulation(args: {
     const id = setInterval(() => {
       const now = Date.now();
       const ctrl = controlsRef.current;
+      const WAVE_SIZE = getIncomingWaveSize(board, ctrl.streakCount);
       let ens = enemiesRef.current;
       let hp = shipHpRef.current;
       let ws = waveSpawnedRef.current;
@@ -217,8 +220,8 @@ export function useSwarmSimulation(args: {
 
       // ── Spawn ─────────────────────────────────────────────────
       if (
-        ws < ctrl.waveSize &&
-        ens.length < ctrl.waveSize &&
+        ws < WAVE_SIZE &&
+        ens.length < WAVE_SIZE &&
         now - lastSpawnAtRef.current >= ctrl.enemySpawnIntervalMs
       ) {
         const enemy = spawnEnemy(
@@ -295,7 +298,7 @@ export function useSwarmSimulation(args: {
         return;
       }
       if (
-        ws >= ctrl.waveSize &&
+        ws >= WAVE_SIZE &&
         ens.length === 0 &&
         statusRef.current === "wave"
       ) {

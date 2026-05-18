@@ -210,7 +210,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
               label="Enemy spawn interval"
               value={value.enemySpawnIntervalMs}
               min={0}
-              max={3000}
+              max={2000}
               step={50}
               display={fmtMs}
               onChange={(v) => set('enemySpawnIntervalMs', v)}
@@ -218,13 +218,13 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
             />
 
             <Slider
-              label="Wave size"
-              value={value.waveSize}
-              min={1}
+              label="Streak count"
+              value={value.streakCount}
+              min={0}
               max={99}
               step={1}
               display={fmt}
-              onChange={(v) => set('waveSize', v)}
+              onChange={(v) => set('streakCount', v)}
               disabled={swarmLocked}
             />
 

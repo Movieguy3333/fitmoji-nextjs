@@ -22,6 +22,7 @@ import type {
   BattleStatus,
   Enemy,
 } from "@/lib/swarm-village/sim/types";
+import { getIncomingWaveSize } from "@/lib/swarm-village/sim/combat";
 
 type Props = {
   map: SwarmVillageMapSnapshot;
@@ -273,19 +274,37 @@ export function SwarmVillageLiveScene({
       <div className="absolute inset-x-0 bottom-0 h-[34%] bg-linear-to-t from-[#315446]/55 to-transparent" />
       <div className="absolute bottom-[6%] left-[15%] h-[10%] w-[70%] rounded-[50%] bg-[#081018]/18 blur-xl" />
 
-      {/* Castle HP bar — shown whenever a wave is in progress or just finished */}
-      {sim.status !== "ready" && (
-        <div className="absolute left-8 top-25 z-[950] flex flex-col gap-1.5 rounded-md border border-white/30 bg-[#081018]/55 px-3 py-2 backdrop-blur-sm">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/80">
-              Castle
-            </span>
-            <span className="text-[0.68rem] font-black tabular-nums text-white">
-              {sim.shipHp} / {SHIP_MAX_HP}
-            </span>
+      {/* Ongoing Wave Progress Display — shown whenever a wave is in progress or just finished*/}
+      {true && ( // previously sim.status !== "ready"// 
+        <div className="absolute left-8 top-25 z-[950] flex flex-col gap-2">
+          {/* Castle HP bar */}
+          <div className="flex flex-col gap-1.5 rounded-md border border-white/30 bg-[#081018]/55 px-3 py-2 backdrop-blur-sm">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/80">
+                Castle
+              </span>
+              <span className="text-[0.68rem] font-black tabular-nums text-white">
+                {`${sim.shipHp} / ${SHIP_MAX_HP}`}
+              </span>
+            </div>
+            <div style={{ width: 80 }}>
+              <HpBar hp={sim.shipHp} maxHp={SHIP_MAX_HP} />
+            </div>
           </div>
-          <div style={{ width: 80 }}>
-            <HpBar hp={sim.shipHp} maxHp={SHIP_MAX_HP} />
+
+          {/* Enemy Count */}
+          <div className="flex flex-col gap-1.5 rounded-md border border-white/30 bg-[#081018]/55 px-3 py-2 backdrop-blur-sm">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/80">
+                Enemy Count
+              </span>
+              <span className="text-[0.68rem] font-black tabular-nums text-white">
+                {sim.enemies.length} / {getIncomingWaveSize(sim.board, controls.streakCount)}
+              </span>
+            </div>
+            <div style={{ width: 80 }}>
+              <HpBar hp={sim.enemies.length} maxHp={getIncomingWaveSize(sim.board, controls.streakCount)} />
+            </div>
           </div>
         </div>
       )}
