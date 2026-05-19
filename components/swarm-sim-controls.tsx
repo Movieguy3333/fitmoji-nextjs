@@ -113,6 +113,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
 
   const fmtMult = (v: number) => `${v.toFixed(2)}×`;
   const fmtMs = (v: number) => `${v.toFixed(0)}ms`;
+  const fmtPercent = (v: number) => `${(v*100).toFixed(0)}%`;
   const fmt = (v: number) => `${v.toFixed(0)}`;
 
   return (
@@ -154,14 +155,14 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
           )}
 
           <div
-            className={`flex flex-col gap-3 transition-opacity ${swarmLocked ? "pointer-events-none opacity-40" : ""}`}
+            className={`flex flex-col gap-3 transition-opacity ${swarmLocked ? "pointer-events-none opacity-100" : ""}`}
           >
             <Slider
               label="Ijom Damage multiplier"
               sublabel="Enemies"
               value={value.ijomDamageMultiplier}
               min={0.25}
-              max={3}
+              max={5}
               step={0.25}
               display={fmtMult}
               onChange={(v) => set("ijomDamageMultiplier", v)}
@@ -185,7 +186,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
               sublabel="Allies"
               value={value.treeDamageMultiplier}
               min={0.25}
-              max={3}
+              max={5}
               step={0.25}
               display={fmtMult}
               onChange={(v) => set("treeDamageMultiplier", v)}
@@ -227,13 +228,24 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
             />
 
             <Slider
-              label="Wave size"
-              value={value.waveSize}
+              label="Streak count"
+              value={value.streakCount}
               min={1}
-              max={99}
+              max={50}
               step={1}
               display={fmt}
-              onChange={(v) => set("waveSize", v)}
+              onChange={(v) => set("streakCount", v)}
+              disabled={swarmLocked}
+            />
+
+            <Slider
+              label="Snow Ijom Spawn Chance"
+              value={value.snowIjomSpawnChance}
+              min={0}
+              max={1}
+              step={.01}
+              display={fmtPercent}
+              onChange={(v) => set("snowIjomSpawnChance", v)}
               disabled={swarmLocked}
             />
           </div>

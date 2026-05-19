@@ -25,6 +25,7 @@ import {
 } from "@/lib/swarm-village/sim/constants";
 import type { SimControls } from "@/lib/swarm-village/sim/useSwarmSimulation";
 import { useSwarmSimulation } from "@/lib/swarm-village/sim/useSwarmSimulation";
+import { getIncomingWaveSize } from "@/lib/swarm-village/sim/combat";
 import type { BattleStatus, Enemy } from "@/lib/swarm-village/sim/types";
 import type { Projectile } from "@/lib/swarm-village/sim/tree-combat";
 import {
@@ -382,6 +383,18 @@ export function SwarmVillageLiveScene({
           </div>
           <div style={{ width: 80 }}>
             <HpBar hp={sim.shipHp} maxHp={SHIP_MAX_HP} />
+          </div>
+        </div>
+      )}
+      {sim.status !== "ready" && (
+        <div className="absolute left-72 top-40 z-[950] flex flex-col gap-1.5 rounded-md border border-white/30 bg-[#081018]/55 px-3 py-2 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/80">
+              Wave Size
+            </span>
+            <span className="text-[0.88rem] font-black tabular-nums text-white">
+              {getIncomingWaveSize(sim.board, controls.streakCount)}
+            </span>
           </div>
         </div>
       )}

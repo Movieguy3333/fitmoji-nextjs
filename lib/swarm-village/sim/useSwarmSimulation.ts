@@ -15,7 +15,7 @@ import {
   SHIP_MAX_HP,
   WAVE_SIMULATION_INTERVAL_MS,
 } from "./constants";
-import { getEnemySpawnPosition } from "./combat";
+import { getEnemySpawnPosition, getIncomingWaveSize } from "./combat";
 import { getPathCells, stepEnemy } from "./pathing";
 import type { Projectile } from "./tree-combat";
 import { stepTreeCombat } from "./tree-combat";
@@ -39,8 +39,10 @@ export type SimControls = {
   /** Scales enemy spawn time interval. */
   enemySpawnIntervalMs: number;
   
+  /** chance of spawning a snow Ijom*/
+  snowIjomSpawnChance: number;
   /** */
-  waveSize: number;
+  streakCount: number;
 
   /*not used*/
   /** Scales attack damage for combat trees */
@@ -85,9 +87,10 @@ function spawnEnemy(
   ijomDamageMultiplier: number,
   ijomHpMultiplier: number,
   speedMultiplier: number,
+  snowIjomSpawnChance: number,
 ): Enemy | null {
   const variant: "normal" | "snow" =
-    Math.random() < SNOW_IJOM_SPAWN_CHANCE ? "snow" : "normal";
+    Math.random() < snowIjomSpawnChance ? "snow" : "normal";
   const pos = getEnemySpawnPosition(enemies, gridCols, variant);
   if (!pos) return null;
 
@@ -176,6 +179,7 @@ export function useSwarmSimulation(args: {
     const id = setInterval(() => {
       const now = Date.now();
       const ctrl = controlsRef.current;
+      const WAVE_SIZE = getIncomingWaveSize(board, ctrl.streakCount);
       let ens = enemiesRef.current;
       let hp = shipHpRef.current;
       let ws = waveSpawnedRef.current;
@@ -237,8 +241,8 @@ export function useSwarmSimulation(args: {
 
       // ── Spawn ─────────────────────────────────────────────────
       if (
-        ws < ctrl.waveSize &&
-        ens.length < ctrl.waveSize &&
+        ws < WAVE_SIZE &&
+        ens.length < WAVE_SIZE &&
         now - lastSpawnAtRef.current >= ctrl.enemySpawnIntervalMs
       ) {
         const enemy = spawnEnemy(
@@ -248,6 +252,7 @@ export function useSwarmSimulation(args: {
           ctrl.ijomDamageMultiplier,
           ctrl.ijomHpMultiplier,
           ctrl.enemySpeedMultiplier,
+          ctrl.snowIjomSpawnChance,
         );
         if (enemy) {
           ens = [...ens, enemy];
@@ -306,7 +311,7 @@ export function useSwarmSimulation(args: {
         enemies: ens,
         projectiles: projectilesRef.current,
         now,
-        damageMultiplier: ctrl.ijomDamageMultiplier,
+        damageMultiplier: ctrl.treeDamageMultiplier,
         nextProjectileId,
       });
 
@@ -354,7 +359,7 @@ export function useSwarmSimulation(args: {
         return;
       }
       if (
-        ws >= ctrl.waveSize &&
+        ws >= WAVE_SIZE &&
         ens.length === 0 &&
         statusRef.current === "wave"
       ) {
