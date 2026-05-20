@@ -155,99 +155,139 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
           )}
 
           <div
-            className={`flex flex-col gap-3 transition-opacity ${swarmLocked ? "pointer-events-none opacity-100" : ""}`}
+            className={`flex flex-col gap-4 transition-opacity ${swarmLocked ? "pointer-events-none opacity-100" : ""}`}
           >
-            <Slider
-              label="Ijom Damage multiplier"
-              sublabel="Enemies"
-              value={value.ijomDamageMultiplier}
-              min={0.25}
-              max={5}
-              step={0.25}
-              display={fmtMult}
-              onChange={(v) => set("ijomDamageMultiplier", v)}
-              disabled={swarmLocked}
-            />
+            {/* ── Trees ── */}
+            <div className="flex flex-col gap-3">
+              <p className="text-[0.6rem] font-black uppercase tracking-[0.18em] text-[#2a9d8f]">
+                Trees
+              </p>
 
-            <Slider
-              label="Ijom HP multiplier"
-              sublabel="Enemies"
-              value={value.ijomHpMultiplier}
-              min={0.25}
-              max={3}
-              step={0.25}
-              display={fmtMult}
-              onChange={(v) => set("ijomHpMultiplier", v)}
-              disabled={swarmLocked}
-            />
+              <Slider
+                label="Damage multiplier"
+                value={value.treeDamageMultiplier}
+                min={0.25}
+                max={5}
+                step={0.25}
+                display={fmtMult}
+                onChange={(v) => set("treeDamageMultiplier", v)}
+                disabled={swarmLocked}
+              />
 
-            <Slider
-              label="Tree Damage multiplier"
-              sublabel="Allies"
-              value={value.treeDamageMultiplier}
-              min={0.25}
-              max={5}
-              step={0.25}
-              display={fmtMult}
-              onChange={(v) => set("treeDamageMultiplier", v)}
-              disabled={swarmLocked}
-            />
+              <Slider
+                label="HP multiplier"
+                value={value.treeHpMultiplier}
+                min={0.25}
+                max={3}
+                step={0.25}
+                display={fmtMult}
+                onChange={(v) => set("treeHpMultiplier", v)}
+                disabled={swarmLocked}
+              />
 
-            <Slider
-              label="Tree HP multiplier"
-              sublabel="Allies"
-              value={value.treeHpMultiplier}
-              min={0.25}
-              max={3}
-              step={0.25}
-              display={fmtMult}
-              onChange={(v) => set("treeHpMultiplier", v)}
-              disabled={swarmLocked}
-            />
+              {/* Smart Fire toggle */}
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[0.73rem] font-black uppercase tracking-[0.14em] text-[#264653]">
+                    Smart Fire
+                  </span>
+                  <span className="text-[0.62rem] font-semibold text-[#264653]/55">
+                    Skip shots that would overkill
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={value.smartFire}
+                  disabled={swarmLocked}
+                  onClick={() => set("smartFire", !value.smartFire)}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${
+                    value.smartFire ? "bg-[#2a9d8f]" : "bg-[#264653]/20"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      value.smartFire ? "translate-x-4" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
 
-            <Slider
-              label="Enemy speed"
-              value={value.enemySpeedMultiplier}
-              min={0.25}
-              max={5}
-              step={0.25}
-              display={fmtMult}
-              onChange={(v) => set("enemySpeedMultiplier", v)}
-              disabled={swarmLocked}
-            />
+            <div className="border-t border-[#264653]/10" />
 
-            <Slider
-              label="Enemy spawn interval"
-              value={value.enemySpawnIntervalMs}
-              min={0}
-              max={3000}
-              step={50}
-              display={fmtMs}
-              onChange={(v) => set("enemySpawnIntervalMs", v)}
-              disabled={swarmLocked}
-            />
+            {/* ── Enemies ── */}
+            <div className="flex flex-col gap-3">
+              <p className="text-[0.6rem] font-black uppercase tracking-[0.18em] text-[#e76f51]">
+                Enemies
+              </p>
 
-            <Slider
-              label="Streak count"
-              value={value.streakCount}
-              min={1}
-              max={50}
-              step={1}
-              display={fmt}
-              onChange={(v) => set("streakCount", v)}
-              disabled={swarmLocked}
-            />
+              <Slider
+                label="Damage multiplier"
+                value={value.ijomDamageMultiplier}
+                min={0.25}
+                max={5}
+                step={0.25}
+                display={fmtMult}
+                onChange={(v) => set("ijomDamageMultiplier", v)}
+                disabled={swarmLocked}
+              />
 
-            <Slider
-              label="Snow Ijom Spawn Chance"
-              value={value.snowIjomSpawnChance}
-              min={0}
-              max={1}
-              step={.01}
-              display={fmtPercent}
-              onChange={(v) => set("snowIjomSpawnChance", v)}
-              disabled={swarmLocked}
-            />
+              <Slider
+                label="HP multiplier"
+                value={value.ijomHpMultiplier}
+                min={0.25}
+                max={3}
+                step={0.25}
+                display={fmtMult}
+                onChange={(v) => set("ijomHpMultiplier", v)}
+                disabled={swarmLocked}
+              />
+
+              <Slider
+                label="Speed"
+                value={value.enemySpeedMultiplier}
+                min={0.25}
+                max={5}
+                step={0.25}
+                display={fmtMult}
+                onChange={(v) => set("enemySpeedMultiplier", v)}
+                disabled={swarmLocked}
+              />
+
+              <Slider
+                label="Spawn interval"
+                value={value.enemySpawnIntervalMs}
+                min={0}
+                max={3000}
+                step={50}
+                display={fmtMs}
+                onChange={(v) => set("enemySpawnIntervalMs", v)}
+                disabled={swarmLocked}
+              />
+
+              <Slider
+                label="Streak count"
+                value={value.streakCount}
+                min={1}
+                max={50}
+                step={1}
+                display={fmt}
+                onChange={(v) => set("streakCount", v)}
+                disabled={swarmLocked}
+              />
+
+              <Slider
+                label="Snow spawn chance"
+                value={value.snowIjomSpawnChance}
+                min={0}
+                max={1}
+                step={0.01}
+                display={fmtPercent}
+                onChange={(v) => set("snowIjomSpawnChance", v)}
+                disabled={swarmLocked}
+              />
+            </div>
           </div>
         </div>
       </div>
