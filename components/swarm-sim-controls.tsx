@@ -38,6 +38,7 @@ function Slider({
   max,
   step,
   display,
+  computedLabel,
   onChange,
   disabled,
 }: {
@@ -48,12 +49,13 @@ function Slider({
   max: number;
   step: number;
   display?: (v: number) => string;
+  computedLabel?: string;
   onChange: (v: number) => void;
   disabled: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-start justify-between gap-1">
         <div className="flex flex-col">
           <span className="text-[0.62rem] font-black uppercase tracking-[0.12em] text-[#264653]">
             {label}
@@ -64,9 +66,16 @@ function Slider({
             </span>
           )}
         </div>
-        <span className="text-[0.62rem] font-black tabular-nums text-[#2a9d8f]">
-          {display ? display(value) : value}
-        </span>
+        <div className="flex flex-col items-end shrink-0">
+          <span className="text-[0.62rem] font-black tabular-nums text-[#2a9d8f]">
+            {display ? display(value) : value}
+          </span>
+          {computedLabel && (
+            <span className="text-[0.48rem] font-semibold tabular-nums text-[#264653]/60 leading-tight">
+              {computedLabel}
+            </span>
+          )}
+        </div>
       </div>
       <input
         type="range"
@@ -113,8 +122,18 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
 
   const fmtMult = (v: number) => `${v.toFixed(2)}×`;
   const fmtMs = (v: number) => `${v.toFixed(0)}ms`;
-  const fmtPercent = (v: number) => `${(v*100).toFixed(0)}%`;
+  const fmtPercent = (v: number) => `${(v * 100).toFixed(0)}%`;
   const fmt = (v: number) => `${v.toFixed(0)}`;
+
+  // Base stats used to compute final values shown in UI
+  const treeDmgLabel = (mult: number) =>
+    `Box ${Math.round(12 * mult)} · Ten ${Math.round(8 * mult)} · QB ${Math.round(5 * mult)}`;
+  const treeHpLabel = (mult: number) =>
+    `Box ${Math.round(135 * mult)} · Ten ${Math.round(115 * mult)} · QB ${Math.round(150 * mult)}`;
+  const enemyDmgLabel = (mult: number) => `${Math.round(8 * mult)} dmg`;
+  const enemyHpLabel = (mult: number) => `${Math.round(18 * mult)} HP`;
+  const enemySpeedLabel = (mult: number) =>
+    `${(0.008 * mult).toFixed(4)}/tick`;
 
   return (
     <div className="absolute right-5 top-5  sm:right-8 sm:top-8 flex flex-col items-end rounded-lg border border-white/45 bg-white/86 shadow-[0_14px_32px_rgba(8,16,24,0.18)] backdrop-blur-md">
@@ -170,6 +189,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
                 max={5}
                 step={0.25}
                 display={fmtMult}
+                computedLabel={treeDmgLabel(value.treeDamageMultiplier)}
                 onChange={(v) => set("treeDamageMultiplier", v)}
                 disabled={swarmLocked}
               />
@@ -181,6 +201,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
                 max={3}
                 step={0.25}
                 display={fmtMult}
+                computedLabel={treeHpLabel(value.treeHpMultiplier)}
                 onChange={(v) => set("treeHpMultiplier", v)}
                 disabled={swarmLocked}
               />
@@ -229,6 +250,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
                 max={5}
                 step={0.25}
                 display={fmtMult}
+                computedLabel={enemyDmgLabel(value.ijomDamageMultiplier)}
                 onChange={(v) => set("ijomDamageMultiplier", v)}
                 disabled={swarmLocked}
               />
@@ -240,6 +262,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
                 max={3}
                 step={0.25}
                 display={fmtMult}
+                computedLabel={enemyHpLabel(value.ijomHpMultiplier)}
                 onChange={(v) => set("ijomHpMultiplier", v)}
                 disabled={swarmLocked}
               />
@@ -251,6 +274,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
                 max={5}
                 step={0.25}
                 display={fmtMult}
+                computedLabel={enemySpeedLabel(value.enemySpeedMultiplier)}
                 onChange={(v) => set("enemySpeedMultiplier", v)}
                 disabled={swarmLocked}
               />

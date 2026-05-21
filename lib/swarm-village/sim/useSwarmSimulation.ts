@@ -7,12 +7,15 @@ import type { SwarmVillageBoardCell } from "@/types/swarm-village";
 import { boardIndex } from "./board";
 import {
   DEFAULT_WAVE_SIZE,
+  GRID_ROWS,
   IJOM_BASE_DAMAGE,
   IJOM_SPEED_MULTIPLIER,
   IJOM_SPEED_PER_TICK_BASE,
   IJOM_SPEED_PER_TICK_VARIANCE,
   IJOM_VILLAGE_SPEED_SCALE,
+  NORMAL_IJOM_WALL_DAMAGE,
   SHIP_MAX_HP,
+  SNOW_IJOM_WALL_DAMAGE,
   WAVE_SIMULATION_INTERVAL_MS,
 } from "./constants";
 import { getEnemySpawnPosition, getIncomingWaveSize } from "./combat";
@@ -20,6 +23,7 @@ import { getPathCells, stepEnemy } from "./pathing";
 import type { Projectile } from "./tree-combat";
 import { stepTreeCombat } from "./tree-combat";
 import type { BattleStatus, BoardPatch, Enemy } from "./types";
+import { getUnitMaxHp, isUpgradeableTreeUnit } from "./units";
 import { randomIntBetween } from "./utils";
 
 // Internal sim parameters not exposed as user controls
@@ -44,10 +48,18 @@ export type SimControls = {
   /** */
   streakCount: number;
 
-  /*not used*/
-  /** Scales attack damage for combat trees */
+  /**
+   * Scales attack damage for combat trees. Applied live in stepTreeCombat —
+   * every tree's damage is `getCombatUnitDamage(...) * treeDamageMultiplier`,
+   * so changing this slider affects all trees immediately.
+   */
   treeDamageMultiplier: number;
-  /** Scales max HP for combative trees. */
+  /**
+   * Scales max HP for combat trees. Applied live in the tick loop — every
+   * tree's unitMaxHp is rescaled to `getUnitMaxHp(...) * treeHpMultiplier`
+   * each tick (with unitHp scaled to preserve health ratio), so changing
+   * this slider affects all trees immediately.
+   */
   treeHpMultiplier: number;
   /** When true, trees skip firing if in-flight projectiles will already kill the target. */
   smartFire: boolean;
@@ -63,6 +75,42 @@ function makeFreshBoard(
   source: SwarmVillageBoardCell[],
 ): SwarmVillageBoardCell[] {
   return source.map((cell) => ({ ...cell }));
+}
+
+/**
+ * Rescales every combat tree on the board so its `unitMaxHp` matches the
+ * current `treeHpMultiplier`, preserving each tree's health ratio. Returns
+ * the same board unchanged if nothing needs updating (no allocation).
+ *
+ * Called at the top of each tick so the HP slider drives all trees live —
+ * map-loaded trees AND user-placed trees — including while the wave is idle.
+ */
+function rescaleTreeHps(
+  board: SwarmVillageBoardCell[],
+  gridCols: number,
+  hpMultiplier: number,
+): { board: SwarmVillageBoardCell[]; changed: boolean } {
+  let next: SwarmVillageBoardCell[] | null = null;
+
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      const idx = boardIndex(r, c, gridCols);
+      const cell = board[idx];
+      if (!cell || !isUpgradeableTreeUnit(cell.unit)) continue;
+
+      const baseMax = getUnitMaxHp(cell.unit, cell.unitLevel || 1);
+      const targetMax = Math.max(1, Math.round(baseMax * hpMultiplier));
+      if (cell.unitMaxHp === targetMax) continue;
+
+      const ratio = cell.unitMaxHp > 0 ? cell.unitHp / cell.unitMaxHp : 1;
+      const targetHp = Math.max(1, Math.round(targetMax * ratio));
+
+      if (!next) next = [...board];
+      next[idx] = { ...cell, unitMaxHp: targetMax, unitHp: targetHp };
+    }
+  }
+
+  return next ? { board: next, changed: true } : { board, changed: false };
 }
 
 function applyPatches(
@@ -103,6 +151,9 @@ function spawnEnemy(
   const baseMaxHp = variant === "snow" ? 28 : 18;
   const maxHp = Math.round(baseMaxHp * ijomHpMultiplier);
 
+  const baseWallDamage =
+    variant === "snow" ? SNOW_IJOM_WALL_DAMAGE : NORMAL_IJOM_WALL_DAMAGE;
+
   console.log("damage", IJOM_BASE_DAMAGE * ijomDamageMultiplier);
   console.log("hp", maxHp);
 
@@ -114,6 +165,7 @@ function spawnEnemy(
     hp: maxHp,
     maxHp,
     damage: IJOM_BASE_DAMAGE * ijomDamageMultiplier,
+    wallDamage: baseWallDamage * ijomDamageMultiplier,
     speedPerTick: baseSpeed * speedMultiplier,
     spawnedAt: now,
     lastAttackAt: 0,
@@ -184,6 +236,19 @@ export function useSwarmSimulation(args: {
       let ens = enemiesRef.current;
       let hp = shipHpRef.current;
       let ws = waveSpawnedRef.current;
+
+      // Rescale tree HPs to match the current treeHpMultiplier slider. Runs
+      // every tick (including idle / pre-wave) so HP responds in real time to
+      // slider changes for both map-loaded and user-placed trees.
+      const hpRescale = rescaleTreeHps(
+        boardRef.current,
+        gridCols,
+        ctrl.treeHpMultiplier,
+      );
+      if (hpRescale.changed) {
+        boardRef.current = hpRescale.board;
+        setBoard(hpRescale.board);
+      }
 
       const currentStatus = statusRef.current;
       const isTerminal =

@@ -11,7 +11,12 @@ export type Enemy = {
   col: number;
   hp: number;
   maxHp: number;
+  /** Damage this enemy deals per attack against trees/units. Baked in at
+   * spawn time as IJOM_BASE_DAMAGE * ijomDamageMultiplier. */
   damage: number;
+  /** Damage this enemy deals per attack against walls/fences. Baked in at
+   * spawn time as the variant's base wall damage * ijomDamageMultiplier. */
+  wallDamage: number;
   speedPerTick: number;
   spawnedAt: number;
   lastAttackAt: number;

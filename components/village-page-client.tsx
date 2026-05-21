@@ -117,7 +117,15 @@ export function VillagePageClient({
           };
         } else {
           const unit = tool as 'boxer' | 'tennis' | 'quarterback';
-          const maxHp = getUnitMaxHp(unit, 1);
+          // Apply the HP multiplier so the tree starts the next tick with the
+          // right HP (otherwise there would be a one-tick flash at base HP
+          // before the simulation's rescaler catches up). The simulation tick
+          // is the source of truth and will keep this in sync as the slider
+          // moves. Damage is fully live — applied at attack time.
+          const maxHp = Math.max(
+            1,
+            Math.round(getUnitMaxHp(unit, 1) * controls.treeHpMultiplier),
+          );
           next[idx] = {
             ...cell,
             unit,
@@ -135,7 +143,16 @@ export function VillagePageClient({
 
       setPlacedKeys((prev) => new Set(prev).add(key));
     },
-    [swarmStatus, tool, placedKeys, map.board, map.gridCols, editedBoard],
+    [
+      swarmStatus,
+      tool,
+      placedKeys,
+      map.board,
+      map.gridCols,
+      editedBoard,
+      controls.treeHpMultiplier,
+      controls.treeDamageMultiplier,
+    ],
   );
 
   function handleResetPlacements() {
