@@ -31,6 +31,7 @@ const DEFAULT_CONTROLS: SimControls = {
   streakCount: 0,
   treeDamageMultiplier: 1.0,
   treeHpMultiplier: 1.0,
+  smartFire: false,
 };
 
 export function VillagePageClient({

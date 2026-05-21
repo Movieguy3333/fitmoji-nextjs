@@ -49,7 +49,8 @@ export type SimControls = {
   treeDamageMultiplier: number;
   /** Scales max HP for combative trees. */
   treeHpMultiplier: number;
-  
+  /** When true, trees skip firing if in-flight projectiles will already kill the target. */
+  smartFire: boolean;
 };
 
 let enemyIdCounter = 0;
@@ -313,6 +314,7 @@ export function useSwarmSimulation(args: {
         now,
         damageMultiplier: ctrl.treeDamageMultiplier,
         nextProjectileId,
+        smartFire: ctrl.smartFire,
       });
 
       if (treePatches.length > 0) {
