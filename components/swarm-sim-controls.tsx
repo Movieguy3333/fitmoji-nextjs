@@ -14,8 +14,8 @@ type Props = {
 function GearIcon() {
   return (
     <svg
-      width="20"
-      height="20"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -55,16 +55,16 @@ function Slider({
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between">
         <div className="flex flex-col">
-          <span className="text-[0.73rem] font-black uppercase tracking-[0.14em] text-[#264653]">
+          <span className="text-[0.62rem] font-black uppercase tracking-[0.12em] text-[#264653]">
             {label}
           </span>
           {sublabel && (
-            <span className="text-[0.62rem] font-semibold text-[#264653]/55">
+            <span className="text-[0.52rem] font-semibold text-[#264653]/55">
               {sublabel}
             </span>
           )}
         </div>
-        <span className="text-[0.73rem] font-black tabular-nums text-[#2a9d8f]">
+        <span className="text-[0.62rem] font-black tabular-nums text-[#2a9d8f]">
           {display ? display(value) : value}
         </span>
       </div>
@@ -124,7 +124,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
         aria-label="Simulation settings"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-[#264653] transition hover:bg-white/30"
+        className="flex h-7 w-7 items-center justify-center rounded-lg text-[#264653] transition hover:bg-white/30"
       >
         <span
           className={`inline-block transition-transform duration-800 ease-out ${
@@ -139,27 +139,27 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
         aria-hidden={!open}
         className={`overflow-hidden transition-all duration-500 ease-out ${
           open
-            ? "max-h-[800px] w-72 opacity-100"
+            ? "max-h-[800px] w-56 opacity-100"
             : "pointer-events-none max-h-0 w-0 opacity-0"
         }`}
       >
-        <div ref={panelRef} className="w-72 p-4">
-          <p className="mb-3 text-[0.65rem] font-black uppercase tracking-[0.2em] text-[#e76f51]">
+        <div ref={panelRef} className="w-56 p-2.5">
+          <p className="mb-2 text-[0.55rem] font-black uppercase tracking-[0.2em] text-[#e76f51]">
             Simulation Controls
           </p>
 
           {swarmLocked && (
-            <p className="mb-3 rounded-md bg-[#e76f51]/10 px-2.5 py-1.5 text-[0.63rem] font-black uppercase tracking-[0.15em] text-[#e76f51]">
+            <p className="mb-2 rounded bg-[#e76f51]/10 px-1.5 py-0.5 text-[0.55rem] font-black uppercase tracking-[0.12em] text-[#e76f51]">
               Controls locked during swarm
             </p>
           )}
 
           <div
-            className={`flex flex-col gap-4 transition-opacity ${swarmLocked ? "pointer-events-none opacity-100" : ""}`}
+            className={`flex flex-col gap-3 transition-opacity ${swarmLocked ? "pointer-events-none opacity-40" : ""}`}
           >
             {/* ── Trees ── */}
-            <div className="flex flex-col gap-3">
-              <p className="text-[0.6rem] font-black uppercase tracking-[0.18em] text-[#2a9d8f]">
+            <div className="flex flex-col gap-2">
+              <p className="text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#2a9d8f]">
                 Trees
               </p>
 
@@ -188,10 +188,10 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
               {/* Smart Fire toggle */}
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-[0.73rem] font-black uppercase tracking-[0.14em] text-[#264653]">
+                  <span className="text-[0.62rem] font-black uppercase tracking-[0.12em] text-[#264653]">
                     Smart Fire
                   </span>
-                  <span className="text-[0.62rem] font-semibold text-[#264653]/55">
+                  <span className="text-[0.52rem] font-semibold text-[#264653]/55">
                     Skip shots that would overkill
                   </span>
                 </div>
@@ -217,7 +217,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
             <div className="border-t border-[#264653]/10" />
 
             {/* ── Enemies ── */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               <p className="text-[0.6rem] font-black uppercase tracking-[0.18em] text-[#e76f51]">
                 Enemies
               </p>
