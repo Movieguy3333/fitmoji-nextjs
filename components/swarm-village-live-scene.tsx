@@ -113,6 +113,35 @@ function HpBar({ hp, maxHp }: { hp: number; maxHp: number }) {
 
 // ── Sprites ───────────────────────────────────────────────────────────────────
 
+const IJOM_SMASH_FRAMES = [0, 1, 2, 3, 4].map((i) => `/ijom_smash_${i}.webp`);
+const SNOW_IJOM_SMASH_FRAMES = [0, 1, 2, 3, 4].map((i) => `/snow_ijom_smash_${i}.webp`);
+const SMASH_SEQUENCE = [0, 1, 2, 3, 4, 3, 2, 1, 0] as const;
+const SMASH_FRAME_MS = 50;
+
+function getIjomSmashSrc(enemy: Enemy): string | null {
+  const elapsed = Date.now() - enemy.lastAttackAt;
+  const step = Math.floor(elapsed / SMASH_FRAME_MS);
+  if (step >= SMASH_SEQUENCE.length) return null;
+  const frames = enemy.variant === "snow" ? SNOW_IJOM_SMASH_FRAMES : IJOM_SMASH_FRAMES;
+  return frames[SMASH_SEQUENCE[step]];
+}
+
+const BOXER_ATTACK_FRAMES = [0,1,2,3].map(i => `/swarm-village/sudo_boxer_${i}.webp`);
+const TENNIS_ATTACK_FRAMES = [0,1,2,3].map(i => `/swarm-village/sudo_tennis_${i}.webp`);
+const FIGHTER_SEQUENCE = [0,1,2,3,2,1,0] as const;
+
+function getFighterSrc(spriteSrc: string, lastAttackAt: number): string {
+  const isBoxer = spriteSrc.includes("boxer");
+  const isTennis = spriteSrc.includes("tennis");
+  if (!isBoxer && !isTennis) return spriteSrc;
+  if (!lastAttackAt) return spriteSrc;
+  const frameDurationMs = isBoxer ? 300 / FIGHTER_SEQUENCE.length : 600 / FIGHTER_SEQUENCE.length;
+  const step = Math.floor((Date.now() - lastAttackAt) / frameDurationMs);
+  if (step >= FIGHTER_SEQUENCE.length) return spriteSrc;
+  const frames = isBoxer ? BOXER_ATTACK_FRAMES : TENNIS_ATTACK_FRAMES;
+  return frames[FIGHTER_SEQUENCE[step]] ?? spriteSrc;
+}
+
 function EnemySprite({
   enemy,
   boardCenterX,
@@ -126,7 +155,8 @@ function EnemySprite({
 }) {
   const isSnow = enemy.variant === "snow";
 
-  const src = isSnow ? "/snow-ijom-walk.gif" : "/regular-ijom-walk.gif";
+  const smashSrc = getIjomSmashSrc(enemy);
+  const src = smashSrc ?? (isSnow ? "/snow-ijom-walk.gif" : "/regular-ijom-walk.gif");
   const spriteSize = isSnow
     ? Math.round(ENEMY_SPRITE_SIZE * SNOW_IJOM_SPRITE_SCALE)
     : ENEMY_SPRITE_SIZE;
@@ -146,19 +176,24 @@ function EnemySprite({
     <>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
-        alt=""
-        draggable={false}
-        style={toEntityStyle(
-          pos,
-          spriteSize,
-          spriteSize,
-          boardWidth,
-          boardHeight,
-          zIndex,
-          false,
-        )}
-      />
+  src={src}
+  alt=""
+  draggable={false}
+  style={{
+    ...toEntityStyle(
+      pos,
+      spriteSize,
+      spriteSize,
+      boardWidth,
+      boardHeight,
+      zIndex,
+      false,
+    ),
+    objectFit: "contain",
+    transform: smashSrc && !isSnow ? "scale(1.2)" : undefined,
+    transformOrigin: "center bottom",
+  }}
+/>
       {/* HP bar rendered as a sibling in the same board container */}
       <div
         style={{
@@ -357,17 +392,30 @@ export function SwarmVillageLiveScene({
         }}
       >
         {/* Static terrain / walls / units */}
-        {scene.sprites.map((sprite) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={sprite.id}
-            src={sprite.src}
-            alt=""
-            draggable={false}
-            className="absolute select-none"
-            style={toSpriteStyle(sprite)}
-          />
-        ))}
+        
+        {scene.sprites.map((sprite) => {
+          let src = sprite.src;
+          if (sprite.id.startsWith("u-")) {
+            const parts = sprite.id.split("-");
+            const row = parseInt(parts[1]!, 10);
+            const col = parseInt(parts[2]!, 10);
+            const cell = sim.board[row * map.gridCols + col];
+            if (cell?.unitLastAttackAt) {
+              src = getFighterSrc(sprite.src, cell.unitLastAttackAt);
+            }
+          }
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={sprite.id}
+              src={src}
+              alt=""
+              draggable={false}
+              className="absolute select-none"
+              style={toSpriteStyle(sprite)}
+            />
+          );
+        })}
 
         {/* Unit HP bars — rendered above the unit sprite, absolute in board-space */}
         {scene.sprites

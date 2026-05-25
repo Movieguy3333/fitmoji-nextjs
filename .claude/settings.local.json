@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\jhida\\\\Desktop\\\\Projects\\\\wip-name\\\\fitmoji-nextjs-real\\\\app\\\\dev\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"ok\")"
+    ]
+  }
+}
