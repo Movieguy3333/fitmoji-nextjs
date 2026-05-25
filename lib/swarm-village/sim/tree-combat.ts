@@ -41,6 +41,77 @@ export const QUARTERBACK_PROJECTILE_HIT_RADIUS = 0.76;
 export const QUARTERBACK_SPLASH_CELL_RADIUS = 1.5;
 export const QUARTERBACK_ARC_HEIGHT = 2.8;
 
+// ── Smart fire: committed damage helpers ──────────────────────────────────────
+
+/**
+ * For each enemy, sums damage that is already "committed" by in-flight projectiles:
+ * Used by smart fire to avoid overkilling the primary target.
+ */
+function buildCommittedDamageMap(
+  projectiles: Projectile[],
+  enemies: Enemy[],
+): Map<string, number> {
+  const map = new Map<string, number>();
+
+  for (const p of projectiles) {
+    if (p.kind === 'football') {
+      const stepsLeft =
+        p.speedPerTick > 0 ? p.remainingRange / p.speedPerTick : 0;
+      const landRow = Math.round(p.row + p.velRow * stepsLeft);
+      const landCol = Math.round(p.col + p.velCol * stepsLeft);
+      for (const e of enemies) {
+        if (
+          Math.abs(e.row - landRow) <= QUARTERBACK_SPLASH_CELL_RADIUS &&
+          Math.abs(e.col - landCol) <= QUARTERBACK_SPLASH_CELL_RADIUS
+        ) {
+          map.set(e.id, (map.get(e.id) ?? 0) + p.damage);
+        }
+      }
+    } else {
+      // Tennis: step the ball forward one tick to mirror what section B will do,
+      // then attribute damage to whichever enemy it will actually hit.
+      const nextRow = p.row + p.velRow * p.speedPerTick;
+      const nextCol = p.col + p.velCol * p.speedPerTick;
+      const nextRemainingRange = p.remainingRange - p.speedPerTick;
+
+      // 1. Will it hit something this tick? (same radius check as section B)
+      let immediateHitId: string | null = null;
+      let immediateHitDist = Number.POSITIVE_INFINITY;
+      for (const e of enemies) {
+        const d = Math.hypot(e.row - nextRow, e.col - nextCol);
+        if (d <= TENNIS_PROJECTILE_HIT_RADIUS && d < immediateHitDist) {
+          immediateHitId = e.id;
+          immediateHitDist = d;
+        }
+      }
+      if (immediateHitId) {
+        map.set(immediateHitId, (map.get(immediateHitId) ?? 0) + p.damage);
+        continue;
+      }
+
+      // 2. No immediate hit — find nearest enemy ahead from the next-tick position
+      if (nextRemainingRange <= 0) continue;
+      let nearestId: string | null = null;
+      let nearestDist = Number.POSITIVE_INFINITY;
+      for (const e of enemies) {
+        const dot =
+          (e.row - nextRow) * p.velRow + (e.col - nextCol) * p.velCol;
+        if (dot <= 0) continue;
+        const d = Math.hypot(e.row - nextRow, e.col - nextCol);
+        if (d < nearestDist && d <= nextRemainingRange) {
+          nearestDist = d;
+          nearestId = e.id;
+        }
+      }
+      if (nearestId) {
+        map.set(nearestId, (map.get(nearestId) ?? 0) + p.damage);
+      }
+    }
+  }
+
+  return map;
+}
+
 // ── Main step function ────────────────────────────────────────────────────────
 
 /**
@@ -62,15 +133,21 @@ export function stepTreeCombat(args: {
   now: number;
   damageMultiplier: number;
   nextProjectileId: () => string;
+  smartFire: boolean;
 }): {
   nextProjectiles: Projectile[];
   boardPatches: BoardPatch[];
   enemyDamage: Map<string, number>;
 } {
-  const { board, gridCols, enemies, projectiles, now, damageMultiplier, nextProjectileId } = args;
+  const { board, gridCols, enemies, projectiles, now, damageMultiplier, nextProjectileId, smartFire } = args;
   const boardPatches: BoardPatch[] = [];
   const spawnedProjectiles: Projectile[] = [];
   const enemyDamage = new Map<string, number>();
+
+  // Build committed damage map once if smart fire is on (avoids re-computing per tree)
+  const committedDamage = smartFire
+    ? buildCommittedDamageMap(projectiles, enemies)
+    : null;
 
   // ── A. Tree scan ─────────────────────────────────────────────────────────
 
@@ -108,6 +185,13 @@ export function stepTreeCombat(args: {
 
       const target = enemies[targetIndex]!;
       const damage = getCombatUnitDamage(unit, getTreeLevel(cell)) * damageMultiplier;
+
+      // Smart fire: skip if in-flight damage will already finish off the target
+      if (smartFire && committedDamage) {
+        const alreadyCommitted = committedDamage.get(target.id) ?? 0;
+        if (target.hp - alreadyCommitted <= 0) continue;
+      }
+
       const nextFacingScaleX: 1 | -1 = target.col < c ? -1 : 1;
 
       boardPatches.push({
@@ -118,6 +202,10 @@ export function stepTreeCombat(args: {
 
       if (isBoxer) {
         enemyDamage.set(target.id, (enemyDamage.get(target.id) ?? 0) + damage);
+        // Update committed map so other trees later in this same tick see this hit
+        if (committedDamage) {
+          committedDamage.set(target.id, (committedDamage.get(target.id) ?? 0) + damage);
+        }
       } else {
         const launchRow = r + 0.15;
         const dr = target.row - launchRow;
@@ -142,6 +230,10 @@ export function stepTreeCombat(args: {
           }),
         };
         spawnedProjectiles.push(projectile);
+        // Update committed map so other trees later in this same tick see this shot
+        if (committedDamage) {
+          committedDamage.set(target.id, (committedDamage.get(target.id) ?? 0) + damage);
+        }
       }
     }
   }

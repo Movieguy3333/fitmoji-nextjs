@@ -7,19 +7,30 @@ import type { SwarmVillageBoardCell } from "@/types/swarm-village";
 import { boardIndex } from "./board";
 import {
   DEFAULT_WAVE_SIZE,
+  GRID_ROWS,
   IJOM_BASE_DAMAGE,
+  IJOM_CONCURRENT_ENTITY_CAP,
   IJOM_SPEED_MULTIPLIER,
   IJOM_SPEED_PER_TICK_BASE,
   IJOM_SPEED_PER_TICK_VARIANCE,
+  IJOM_SUPER_WAVE_SIZE_THRESHOLD,
   IJOM_VILLAGE_SPEED_SCALE,
   SHIP_MAX_HP,
   WAVE_SIMULATION_INTERVAL_MS,
 } from "./constants";
-import { getEnemySpawnPosition } from "./combat";
+import {
+  getEnemySpawnPosition,
+  getIjomDamageForVariant,
+  getIjomMaxHpForVariant,
+  getIjomPackSize,
+  getIncomingWaveSize,
+  getNextSpawnPackSize,
+} from "./combat";
 import { getPathCells, stepEnemy } from "./pathing";
 import type { Projectile } from "./tree-combat";
 import { stepTreeCombat } from "./tree-combat";
 import type { BattleStatus, BoardPatch, Enemy } from "./types";
+import { getUnitMaxHp, isUpgradeableTreeUnit } from "./units";
 import { randomIntBetween } from "./utils";
 
 // Internal sim parameters not exposed as user controls
@@ -39,15 +50,26 @@ export type SimControls = {
   /** Scales enemy spawn time interval. */
   enemySpawnIntervalMs: number;
   
+  /** chance of spawning a snow Ijom*/
+  snowIjomSpawnChance: number;
   /** */
-  waveSize: number;
+  streakCount: number;
 
-  /*not used*/
-  /** Scales attack damage for combat trees */
+  /**
+   * Scales attack damage for combat trees. Applied live in stepTreeCombat —
+   * every tree's damage is `getCombatUnitDamage(...) * treeDamageMultiplier`,
+   * so changing this slider affects all trees immediately.
+   */
   treeDamageMultiplier: number;
-  /** Scales max HP for combative trees. */
+  /**
+   * Scales max HP for combat trees. Applied live in the tick loop — every
+   * tree's unitMaxHp is rescaled to `getUnitMaxHp(...) * treeHpMultiplier`
+   * each tick (with unitHp scaled to preserve health ratio), so changing
+   * this slider affects all trees immediately.
+   */
   treeHpMultiplier: number;
-  
+  /** When true, trees skip firing if in-flight projectiles will already kill the target. */
+  smartFire: boolean;
 };
 
 let enemyIdCounter = 0;
@@ -60,6 +82,42 @@ function makeFreshBoard(
   source: SwarmVillageBoardCell[],
 ): SwarmVillageBoardCell[] {
   return source.map((cell) => ({ ...cell }));
+}
+
+/**
+ * Rescales every combat tree on the board so its `unitMaxHp` matches the
+ * current `treeHpMultiplier`, preserving each tree's health ratio. Returns
+ * the same board unchanged if nothing needs updating (no allocation).
+ *
+ * Called at the top of each tick so the HP slider drives all trees live —
+ * map-loaded trees AND user-placed trees — including while the wave is idle.
+ */
+function rescaleTreeHps(
+  board: SwarmVillageBoardCell[],
+  gridCols: number,
+  hpMultiplier: number,
+): { board: SwarmVillageBoardCell[]; changed: boolean } {
+  let next: SwarmVillageBoardCell[] | null = null;
+
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      const idx = boardIndex(r, c, gridCols);
+      const cell = board[idx];
+      if (!cell || !isUpgradeableTreeUnit(cell.unit)) continue;
+
+      const baseMax = getUnitMaxHp(cell.unit, cell.unitLevel || 1);
+      const targetMax = Math.max(1, Math.round(baseMax * hpMultiplier));
+      if (cell.unitMaxHp === targetMax) continue;
+
+      const ratio = cell.unitMaxHp > 0 ? cell.unitHp / cell.unitMaxHp : 1;
+      const targetHp = Math.max(1, Math.round(targetMax * ratio));
+
+      if (!next) next = [...board];
+      next[idx] = { ...cell, unitMaxHp: targetMax, unitHp: targetHp };
+    }
+  }
+
+  return next ? { board: next, changed: true } : { board, changed: false };
 }
 
 function applyPatches(
@@ -85,10 +143,22 @@ function spawnEnemy(
   ijomDamageMultiplier: number,
   ijomHpMultiplier: number,
   speedMultiplier: number,
-): Enemy | null {
+  snowIjomSpawnChance: number,
+  waveSize: number,
+  waveSpawned: number,
+): { enemy: Enemy; spawnCredits: number } | null {
   const variant: "normal" | "snow" =
-    Math.random() < SNOW_IJOM_SPAWN_CHANCE ? "snow" : "normal";
-  const pos = getEnemySpawnPosition(enemies, gridCols, variant);
+    Math.random() < snowIjomSpawnChance ? "snow" : "normal";
+
+  const remainingIjoms = waveSize - waveSpawned;
+  let packSize = getNextSpawnPackSize(waveSize, enemies.length, remainingIjoms);
+
+  let pos = getEnemySpawnPosition(enemies, gridCols, variant, packSize);
+
+  if (!pos && packSize > 1) {
+    packSize = 1;
+    pos = getEnemySpawnPosition(enemies, gridCols, variant, packSize);
+  }
   if (!pos) return null;
 
   const baseSpeed =
@@ -96,23 +166,29 @@ function spawnEnemy(
     IJOM_VILLAGE_SPEED_SCALE *
     IJOM_SPEED_MULTIPLIER;
 
-  const baseMaxHp = variant === "snow" ? 28 : 18;
+  const baseMaxHp = getIjomMaxHpForVariant(variant, packSize);
   const maxHp = Math.round(baseMaxHp * ijomHpMultiplier);
-
-  console.log("damage", IJOM_BASE_DAMAGE * ijomDamageMultiplier);
-  console.log("hp", maxHp);
+  const damage = getIjomDamageForVariant(
+    variant,
+    IJOM_BASE_DAMAGE * ijomDamageMultiplier,
+    packSize,
+  );
 
   return {
-    id: nextEnemyId(),
-    variant: variant,
-    row: pos.row,
-    col: pos.col,
-    hp: maxHp,
-    maxHp,
-    damage: IJOM_BASE_DAMAGE * ijomDamageMultiplier,
-    speedPerTick: baseSpeed * speedMultiplier,
-    spawnedAt: now,
-    lastAttackAt: 0,
+    enemy: {
+      id: nextEnemyId(),
+      variant,
+      packSize: packSize > 1 ? packSize : undefined,
+      row: pos.row,
+      col: pos.col,
+      hp: maxHp,
+      maxHp,
+      damage,
+      speedPerTick: baseSpeed * speedMultiplier,
+      spawnedAt: now,
+      lastAttackAt: 0,
+    },
+    spawnCredits: packSize,
   };
 }
 
@@ -126,6 +202,7 @@ export function useSwarmSimulation(args: {
   projectiles: Projectile[];
   shipHp: number;
   status: BattleStatus;
+  waveSpawned: number;
 } {
   const { initialBoard, gridCols, controls } = args;
 
@@ -145,6 +222,7 @@ export function useSwarmSimulation(args: {
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
   const [shipHp, setShipHp] = useState(SHIP_MAX_HP);
   const [status, setStatus] = useState<BattleStatus>("ready");
+  const [waveSpawned, setWaveSpawned] = useState(0);
 
   // Rebuild board ref when initialBoard changes (e.g. different village loaded)
   useEffect(() => {
@@ -162,6 +240,7 @@ export function useSwarmSimulation(args: {
     setProjectiles([]);
     setShipHp(SHIP_MAX_HP);
     setStatus("ready");
+    setWaveSpawned(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialBoard, gridCols]);
 
@@ -176,9 +255,23 @@ export function useSwarmSimulation(args: {
     const id = setInterval(() => {
       const now = Date.now();
       const ctrl = controlsRef.current;
+      const WAVE_SIZE = getIncomingWaveSize(board, ctrl.streakCount);
       let ens = enemiesRef.current;
       let hp = shipHpRef.current;
       let ws = waveSpawnedRef.current;
+
+      // Rescale tree HPs to match the current treeHpMultiplier slider. Runs
+      // every tick (including idle / pre-wave) so HP responds in real time to
+      // slider changes for both map-loaded and user-placed trees.
+      const hpRescale = rescaleTreeHps(
+        boardRef.current,
+        gridCols,
+        ctrl.treeHpMultiplier,
+      );
+      if (hpRescale.changed) {
+        boardRef.current = hpRescale.board;
+        setBoard(hpRescale.board);
+      }
 
       const currentStatus = statusRef.current;
       const isTerminal =
@@ -193,6 +286,9 @@ export function useSwarmSimulation(args: {
           shipHpRef.current = SHIP_MAX_HP;
           setShipHp(SHIP_MAX_HP);
           waveSpawnedRef.current = 0;
+          setWaveSpawned(0);
+          projectilesRef.current = [];
+          setProjectiles([]);
           boardRef.current = makeFreshBoard(initialBoardRef.current);
           setBoard(boardRef.current);
         }
@@ -212,6 +308,7 @@ export function useSwarmSimulation(args: {
           setEnemies([]);
           setProjectiles([]);
           setShipHp(hp);
+          setWaveSpawned(0);
           boardRef.current = makeFreshBoard(initialBoardRef.current);
           setBoard(boardRef.current);
           if (statusRef.current !== "ready") {
@@ -234,22 +331,29 @@ export function useSwarmSimulation(args: {
       }
 
       // ── Spawn ─────────────────────────────────────────────────
+      const compressedWaveActive = WAVE_SIZE > IJOM_SUPER_WAVE_SIZE_THRESHOLD;
+      const canSpawnEnemyEntity =
+        !compressedWaveActive || ens.length < IJOM_CONCURRENT_ENTITY_CAP;
+
       if (
-        ws < ctrl.waveSize &&
-        ens.length < ctrl.waveSize &&
+        ws < WAVE_SIZE &&
+        canSpawnEnemyEntity &&
         now - lastSpawnAtRef.current >= ctrl.enemySpawnIntervalMs
       ) {
-        const enemy = spawnEnemy(
+        const result = spawnEnemy(
           ens,
           gridCols,
           now,
           ctrl.ijomDamageMultiplier,
           ctrl.ijomHpMultiplier,
           ctrl.enemySpeedMultiplier,
+          ctrl.snowIjomSpawnChance,
+          WAVE_SIZE,
+          ws,
         );
-        if (enemy) {
-          ens = [...ens, enemy];
-          ws += 1;
+        if (result) {
+          ens = [...ens, result.enemy];
+          ws += result.spawnCredits;
           lastSpawnAtRef.current = now;
         }
       }
@@ -281,9 +385,10 @@ export function useSwarmSimulation(args: {
         }
         if (next === null) {
           if (reachedCastle) {
+            const packSize = getIjomPackSize(enemy);
             hp = Math.max(
               0,
-              hp - Math.round(CASTLE_DAMAGE_BASE * ctrl.ijomDamageMultiplier),
+              hp - Math.round(CASTLE_DAMAGE_BASE * ctrl.ijomDamageMultiplier * packSize),
             );
           }
         } else {
@@ -304,8 +409,9 @@ export function useSwarmSimulation(args: {
         enemies: ens,
         projectiles: projectilesRef.current,
         now,
-        damageMultiplier: ctrl.ijomDamageMultiplier,
+        damageMultiplier: ctrl.treeDamageMultiplier,
         nextProjectileId,
+        smartFire: ctrl.smartFire,
       });
 
       if (treePatches.length > 0) {
@@ -338,6 +444,7 @@ export function useSwarmSimulation(args: {
       shipHpRef.current = hp;
       setEnemies([...ens]);
       setShipHp(hp);
+      setWaveSpawned(ws);
 
       // ── Win/loss checks ───────────────────────────────────────
       if (hp <= 0 && statusRef.current === "wave") {
@@ -352,12 +459,14 @@ export function useSwarmSimulation(args: {
         return;
       }
       if (
-        ws >= ctrl.waveSize &&
+        ws >= WAVE_SIZE &&
         ens.length === 0 &&
         statusRef.current === "wave"
       ) {
         statusRef.current = "cleared";
         setStatus("cleared");
+        projectilesRef.current = [];
+        setProjectiles([]);
         boardRef.current = makeFreshBoard(initialBoardRef.current);
         setBoard(boardRef.current);
         return;
@@ -376,5 +485,6 @@ export function useSwarmSimulation(args: {
     projectiles,
     shipHp,
     status,
+    waveSpawned,
   };
 }

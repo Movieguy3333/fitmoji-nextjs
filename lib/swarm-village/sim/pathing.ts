@@ -12,19 +12,34 @@ import {
   SNOW_IJOM_WALL_DAMAGE,
   SNOW_WALL_SEEK_RANGE,
 } from './constants';
-import { enemyReachedCastle, resolveEnemySpacing } from './combat';
+import { enemyReachedCastle, getIjomPackSize, resolveEnemySpacing } from './combat';
 import type { BoardPatch, Enemy } from './types';
 import { isDamageableUnit, getUnitMaxHp, getWallMaxHp } from './units';
 import { clamp, keyForCell } from './utils';
 
+/**
+ * Returns true only when (r, c) is off the grid. Walls and trees are NOT
+ * considered blocking — enemies walk straight at them and stop to attack
+ * once they enter `ENEMY_WALL_ATTACK_RADIUS` / `ENEMY_UNIT_ATTACK_RADIUS`
+ * (handled separately in stepEnemy via `nearWall` and `nearVulnerableUnit`).
+ *
+ * Previously this returned true for `wallHeight > 0`, which made the
+ * pathfinder detour around walls. That detour caused normal Ijoms to drift
+ * out of their column when they got near a wall — they entered the
+ * "wall is impassable" zone (distance ~1.0) before they entered the
+ * "wall is in attack range" zone (distance ≤ 0.96), so the pathfinder
+ * picked a diagonal/sideways alternative and the enemy slid sideways.
+ * Trees never had this problem because they don't set `wallHeight`. Snow
+ * Ijoms don't have it either because their `findWallTarget` branch in
+ * `stepEnemy` bypasses this pathfinder entirely.
+ */
 function blocked(
-  board: SwarmVillageBoardCell[],
+  _board: SwarmVillageBoardCell[],
   r: number,
   c: number,
   gridCols: number,
 ) {
-  if (r < 0 || r >= GRID_ROWS || c < 0 || c >= gridCols) return true;
-  return getCell(board, r, c, gridCols).wallHeight > 0;
+  return r < 0 || r >= GRID_ROWS || c < 0 || c >= gridCols;
 }
 
 function adjacentCells(row: number, col: number) {
@@ -161,7 +176,8 @@ export function stepEnemy(
   if (nw) {
     if (now - e.lastAttackAt >= ENEMY_WALL_ATTACK_COOLDOWN_MS) {
       const wallDamage =
-        e.variant === 'snow' ? SNOW_IJOM_WALL_DAMAGE : NORMAL_IJOM_WALL_DAMAGE;
+        (e.variant === 'snow' ? SNOW_IJOM_WALL_DAMAGE : NORMAL_IJOM_WALL_DAMAGE) *
+        getIjomPackSize(e);
       const { row: wr, col: wc } = nw;
       patches.push({
         row: wr,

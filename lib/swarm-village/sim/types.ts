@@ -7,6 +7,7 @@ export type BattleStatus = 'ready' | 'wave' | 'cleared' | 'lost';
 export type Enemy = {
   id: string;
   variant: 'normal' | 'snow';
+  packSize?: number;
   row: number;
   col: number;
   hp: number;
