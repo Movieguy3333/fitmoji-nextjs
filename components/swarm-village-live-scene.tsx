@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useMemo, useEffect, useRef, useState } from "react";
+import { useMemo, useEffect, useRef, useState, useCallback } from "react";
 
 import { getWallMaxHp } from "@/lib/swarm-village/sim/units";
 import {
@@ -25,13 +25,19 @@ import {
 } from "@/lib/swarm-village/sim/constants";
 import type { SimControls } from "@/lib/swarm-village/sim/useSwarmSimulation";
 import { useSwarmSimulation } from "@/lib/swarm-village/sim/useSwarmSimulation";
-import { getIncomingWaveSize } from "@/lib/swarm-village/sim/combat";
+import { getIncomingWaveSize, getIjomPackSize } from "@/lib/swarm-village/sim/combat";
 import type { BattleStatus, Enemy } from "@/lib/swarm-village/sim/types";
 import type { Projectile } from "@/lib/swarm-village/sim/tree-combat";
 import {
   getFootballScreenAngle,
   getProjectileElevation,
 } from "@/lib/swarm-village/sim/tree-combat";
+
+export type SimStats = {
+  shipHp: number;
+  waveRemaining: number;
+  waveSize: number;
+};
 
 type Props = {
   map: SwarmVillageMapSnapshot;
@@ -40,6 +46,7 @@ type Props = {
   controls: SimControls;
   className?: string;
   onStatusChange?: (status: BattleStatus) => void;
+  onSimStats?: (stats: SimStats) => void;
   onTileClick?: (row: number, col: number) => void;
   hoverTintForTile?: (row: number, col: number) => "legal" | "illegal" | null;
 };
@@ -132,14 +139,16 @@ function EnemySprite({
   const isSnow = enemy.variant === "snow";
 
   const src = isSnow ? "/snow-ijom-walk.gif" : "/regular-ijom-walk.gif";
-  const spriteSize = isSnow
+  const packScale = Math.sqrt(Math.max(1, enemy.packSize ?? 1));
+  const baseSize = isSnow
     ? Math.round(ENEMY_SPRITE_SIZE * SNOW_IJOM_SPRITE_SCALE)
     : ENEMY_SPRITE_SIZE;
+  const spriteSize = Math.round(baseSize * packScale);
 
   const pos = isoPos(boardCenterX, enemy.row, enemy.col);
   const zIndex = 360 + Math.floor((enemy.row + enemy.col) * 10);
 
-  const HP_BAR_W = 32;
+  const HP_BAR_W = 32 * packScale;
   const HP_BAR_H = 5;
   const HP_GAP = 3;
 
@@ -272,6 +281,7 @@ export function SwarmVillageLiveScene({
   controls,
   className = "",
   onStatusChange,
+  onSimStats,
   onTileClick,
   hoverTintForTile,
 }: Props) {
@@ -295,6 +305,19 @@ export function SwarmVillageLiveScene({
       onStatusChange?.(sim.status);
     }
   }, [sim.status, onStatusChange]);
+
+  // Bubble live sim stats up to the parent every tick
+  useEffect(() => {
+    if (!onSimStats) return;
+    const waveSize = getIncomingWaveSize(sim.board, controls.streakCount);
+    const alivePackTotal = sim.enemies.reduce(
+      (sum, e) => sum + getIjomPackSize(e),
+      0,
+    );
+    const waveRemaining =
+      Math.max(0, waveSize - sim.waveSpawned) + alivePackTotal;
+    onSimStats({ shipHp: sim.shipHp, waveRemaining, waveSize });
+  }, [sim.shipHp, sim.waveSpawned, sim.enemies, sim.board, controls.streakCount, onSimStats]);
 
   const scene = useMemo(
     () =>
@@ -370,34 +393,6 @@ export function SwarmVillageLiveScene({
       <div className="absolute inset-x-0 bottom-0 h-[34%] bg-linear-to-t from-[#315446]/55 to-transparent" />
       <div className="absolute bottom-[6%] left-[15%] h-[10%] w-[70%] rounded-[50%] bg-[#081018]/18 blur-xl" />
 
-      {/* Castle HP bar — shown whenever a wave is in progress or just finished */}
-      {sim.status !== "ready" && (
-        <div className="absolute left-72 top-25 z-[950] flex flex-col gap-1.5 rounded-md border border-white/30 bg-[#081018]/55 px-3 py-2 backdrop-blur-sm">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/80">
-              Castle
-            </span>
-            <span className="text-[0.68rem] font-black tabular-nums text-white">
-              {sim.shipHp} / {SHIP_MAX_HP}
-            </span>
-          </div>
-          <div style={{ width: 80 }}>
-            <HpBar hp={sim.shipHp} maxHp={SHIP_MAX_HP} />
-          </div>
-        </div>
-      )}
-      {sim.status !== "ready" && (
-        <div className="absolute left-72 top-40 z-[950] flex flex-col gap-1.5 rounded-md border border-white/30 bg-[#081018]/55 px-3 py-2 backdrop-blur-sm">
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/80">
-              Wave Size
-            </span>
-            <span className="text-[0.88rem] font-black tabular-nums text-white">
-              {getIncomingWaveSize(sim.board, controls.streakCount)}
-            </span>
-          </div>
-        </div>
-      )}
 
       <div
         ref={boardDivRef}

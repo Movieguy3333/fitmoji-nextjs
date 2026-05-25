@@ -71,7 +71,7 @@ function Slider({
             {display ? display(value) : value}
           </span>
           {computedLabel && (
-            <span className="text-[0.48rem] font-semibold tabular-nums text-[#264653]/60 leading-tight">
+            <span className="text-[0.56rem] font-semibold tabular-nums text-blue-500 leading-tight">
               {computedLabel}
             </span>
           )}
@@ -130,10 +130,11 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
     `Box ${Math.round(12 * mult)} · Ten ${Math.round(8 * mult)} · QB ${Math.round(5 * mult)}`;
   const treeHpLabel = (mult: number) =>
     `Box ${Math.round(135 * mult)} · Ten ${Math.round(115 * mult)} · QB ${Math.round(150 * mult)}`;
-  const enemyDmgLabel = (mult: number) => `${Math.round(8 * mult)} dmg`;
-  const enemyHpLabel = (mult: number) => `${Math.round(18 * mult)} HP`;
-  const enemySpeedLabel = (mult: number) =>
-    `${(0.008 * mult).toFixed(4)}/tick`;
+  const enemyDmgLabel = (mult: number) =>
+    `Normal ${Math.round(8 * mult)} · Snow ${Math.round(24 * mult)} dmg`;
+  const enemyHpLabel = (mult: number) =>
+    `Normal ${Math.round(18 * mult)} · Snow ${Math.round(28 * mult)} HP`;
+  const enemySpeedLabel = (mult: number) => `${(0.008 * mult).toFixed(4)}/tick`;
 
   return (
     <div className="absolute right-5 top-5  sm:right-8 sm:top-8 flex flex-col items-end rounded-lg border border-white/45 bg-white/86 shadow-[0_14px_32px_rgba(8,16,24,0.18)] backdrop-blur-md">

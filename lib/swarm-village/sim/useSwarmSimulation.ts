@@ -9,16 +9,23 @@ import {
   DEFAULT_WAVE_SIZE,
   GRID_ROWS,
   IJOM_BASE_DAMAGE,
+  IJOM_CONCURRENT_ENTITY_CAP,
   IJOM_SPEED_MULTIPLIER,
   IJOM_SPEED_PER_TICK_BASE,
   IJOM_SPEED_PER_TICK_VARIANCE,
+  IJOM_SUPER_WAVE_SIZE_THRESHOLD,
   IJOM_VILLAGE_SPEED_SCALE,
-  NORMAL_IJOM_WALL_DAMAGE,
   SHIP_MAX_HP,
-  SNOW_IJOM_WALL_DAMAGE,
   WAVE_SIMULATION_INTERVAL_MS,
 } from "./constants";
-import { getEnemySpawnPosition, getIncomingWaveSize } from "./combat";
+import {
+  getEnemySpawnPosition,
+  getIjomDamageForVariant,
+  getIjomMaxHpForVariant,
+  getIjomPackSize,
+  getIncomingWaveSize,
+  getNextSpawnPackSize,
+} from "./combat";
 import { getPathCells, stepEnemy } from "./pathing";
 import type { Projectile } from "./tree-combat";
 import { stepTreeCombat } from "./tree-combat";
@@ -137,10 +144,21 @@ function spawnEnemy(
   ijomHpMultiplier: number,
   speedMultiplier: number,
   snowIjomSpawnChance: number,
-): Enemy | null {
+  waveSize: number,
+  waveSpawned: number,
+): { enemy: Enemy; spawnCredits: number } | null {
   const variant: "normal" | "snow" =
     Math.random() < snowIjomSpawnChance ? "snow" : "normal";
-  const pos = getEnemySpawnPosition(enemies, gridCols, variant);
+
+  const remainingIjoms = waveSize - waveSpawned;
+  let packSize = getNextSpawnPackSize(waveSize, enemies.length, remainingIjoms);
+
+  let pos = getEnemySpawnPosition(enemies, gridCols, variant, packSize);
+
+  if (!pos && packSize > 1) {
+    packSize = 1;
+    pos = getEnemySpawnPosition(enemies, gridCols, variant, packSize);
+  }
   if (!pos) return null;
 
   const baseSpeed =
@@ -148,27 +166,29 @@ function spawnEnemy(
     IJOM_VILLAGE_SPEED_SCALE *
     IJOM_SPEED_MULTIPLIER;
 
-  const baseMaxHp = variant === "snow" ? 28 : 18;
+  const baseMaxHp = getIjomMaxHpForVariant(variant, packSize);
   const maxHp = Math.round(baseMaxHp * ijomHpMultiplier);
-
-  const baseWallDamage =
-    variant === "snow" ? SNOW_IJOM_WALL_DAMAGE : NORMAL_IJOM_WALL_DAMAGE;
-
-  console.log("damage", IJOM_BASE_DAMAGE * ijomDamageMultiplier);
-  console.log("hp", maxHp);
+  const damage = getIjomDamageForVariant(
+    variant,
+    IJOM_BASE_DAMAGE * ijomDamageMultiplier,
+    packSize,
+  );
 
   return {
-    id: nextEnemyId(),
-    variant: variant,
-    row: pos.row,
-    col: pos.col,
-    hp: maxHp,
-    maxHp,
-    damage: IJOM_BASE_DAMAGE * ijomDamageMultiplier,
-    wallDamage: baseWallDamage * ijomDamageMultiplier,
-    speedPerTick: baseSpeed * speedMultiplier,
-    spawnedAt: now,
-    lastAttackAt: 0,
+    enemy: {
+      id: nextEnemyId(),
+      variant,
+      packSize: packSize > 1 ? packSize : undefined,
+      row: pos.row,
+      col: pos.col,
+      hp: maxHp,
+      maxHp,
+      damage,
+      speedPerTick: baseSpeed * speedMultiplier,
+      spawnedAt: now,
+      lastAttackAt: 0,
+    },
+    spawnCredits: packSize,
   };
 }
 
@@ -182,6 +202,7 @@ export function useSwarmSimulation(args: {
   projectiles: Projectile[];
   shipHp: number;
   status: BattleStatus;
+  waveSpawned: number;
 } {
   const { initialBoard, gridCols, controls } = args;
 
@@ -201,6 +222,7 @@ export function useSwarmSimulation(args: {
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
   const [shipHp, setShipHp] = useState(SHIP_MAX_HP);
   const [status, setStatus] = useState<BattleStatus>("ready");
+  const [waveSpawned, setWaveSpawned] = useState(0);
 
   // Rebuild board ref when initialBoard changes (e.g. different village loaded)
   useEffect(() => {
@@ -218,6 +240,7 @@ export function useSwarmSimulation(args: {
     setProjectiles([]);
     setShipHp(SHIP_MAX_HP);
     setStatus("ready");
+    setWaveSpawned(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialBoard, gridCols]);
 
@@ -263,6 +286,7 @@ export function useSwarmSimulation(args: {
           shipHpRef.current = SHIP_MAX_HP;
           setShipHp(SHIP_MAX_HP);
           waveSpawnedRef.current = 0;
+          setWaveSpawned(0);
           projectilesRef.current = [];
           setProjectiles([]);
           boardRef.current = makeFreshBoard(initialBoardRef.current);
@@ -284,6 +308,7 @@ export function useSwarmSimulation(args: {
           setEnemies([]);
           setProjectiles([]);
           setShipHp(hp);
+          setWaveSpawned(0);
           boardRef.current = makeFreshBoard(initialBoardRef.current);
           setBoard(boardRef.current);
           if (statusRef.current !== "ready") {
@@ -306,12 +331,16 @@ export function useSwarmSimulation(args: {
       }
 
       // ── Spawn ─────────────────────────────────────────────────
+      const compressedWaveActive = WAVE_SIZE > IJOM_SUPER_WAVE_SIZE_THRESHOLD;
+      const canSpawnEnemyEntity =
+        !compressedWaveActive || ens.length < IJOM_CONCURRENT_ENTITY_CAP;
+
       if (
         ws < WAVE_SIZE &&
-        ens.length < WAVE_SIZE &&
+        canSpawnEnemyEntity &&
         now - lastSpawnAtRef.current >= ctrl.enemySpawnIntervalMs
       ) {
-        const enemy = spawnEnemy(
+        const result = spawnEnemy(
           ens,
           gridCols,
           now,
@@ -319,10 +348,12 @@ export function useSwarmSimulation(args: {
           ctrl.ijomHpMultiplier,
           ctrl.enemySpeedMultiplier,
           ctrl.snowIjomSpawnChance,
+          WAVE_SIZE,
+          ws,
         );
-        if (enemy) {
-          ens = [...ens, enemy];
-          ws += 1;
+        if (result) {
+          ens = [...ens, result.enemy];
+          ws += result.spawnCredits;
           lastSpawnAtRef.current = now;
         }
       }
@@ -354,9 +385,10 @@ export function useSwarmSimulation(args: {
         }
         if (next === null) {
           if (reachedCastle) {
+            const packSize = getIjomPackSize(enemy);
             hp = Math.max(
               0,
-              hp - Math.round(CASTLE_DAMAGE_BASE * ctrl.ijomDamageMultiplier),
+              hp - Math.round(CASTLE_DAMAGE_BASE * ctrl.ijomDamageMultiplier * packSize),
             );
           }
         } else {
@@ -412,6 +444,7 @@ export function useSwarmSimulation(args: {
       shipHpRef.current = hp;
       setEnemies([...ens]);
       setShipHp(hp);
+      setWaveSpawned(ws);
 
       // ── Win/loss checks ───────────────────────────────────────
       if (hp <= 0 && statusRef.current === "wave") {
@@ -452,5 +485,6 @@ export function useSwarmSimulation(args: {
     projectiles,
     shipHp,
     status,
+    waveSpawned,
   };
 }

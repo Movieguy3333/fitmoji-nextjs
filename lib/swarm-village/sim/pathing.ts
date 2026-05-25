@@ -8,9 +8,11 @@ import {
   ENEMY_WALL_ATTACK_COOLDOWN_MS,
   ENEMY_WALL_ATTACK_RADIUS,
   GRID_ROWS,
+  NORMAL_IJOM_WALL_DAMAGE,
+  SNOW_IJOM_WALL_DAMAGE,
   SNOW_WALL_SEEK_RANGE,
 } from './constants';
-import { enemyReachedCastle, resolveEnemySpacing } from './combat';
+import { enemyReachedCastle, getIjomPackSize, resolveEnemySpacing } from './combat';
 import type { BoardPatch, Enemy } from './types';
 import { isDamageableUnit, getUnitMaxHp, getWallMaxHp } from './units';
 import { clamp, keyForCell } from './utils';
@@ -173,7 +175,9 @@ export function stepEnemy(
   const nw = nearWall(e, board, gridCols);
   if (nw) {
     if (now - e.lastAttackAt >= ENEMY_WALL_ATTACK_COOLDOWN_MS) {
-      const wallDamage = e.wallDamage;
+      const wallDamage =
+        (e.variant === 'snow' ? SNOW_IJOM_WALL_DAMAGE : NORMAL_IJOM_WALL_DAMAGE) *
+        getIjomPackSize(e);
       const { row: wr, col: wc } = nw;
       patches.push({
         row: wr,

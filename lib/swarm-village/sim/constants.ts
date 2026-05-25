@@ -60,3 +60,16 @@ export const ENEMY_SPRITE_LEFT_OFFSET = 8;
 export const ENEMY_SPRITE_TOP_OFFSET = 8;
 
 export const SNOW_WALL_SEEK_RANGE = 3;
+
+export const NORMAL_IJOM_MAX_HP = 18;
+export const SNOW_IJOM_MAX_HP = 28;
+export const SNOW_IJOM_DAMAGE_MULTIPLIER = 3;
+
+export const IJOM_CONCURRENT_ENTITY_CAP = 70;
+export const IJOM_SUPER_WAVE_SIZE_THRESHOLD = 70;
+export const IJOM_SUPER_PACK_SIZE = 4;
+export const IJOM_SUPER_SPAWN_BASE_CHANCE = 0.35;
+export const IJOM_SUPER_SPAWN_MAX_CHANCE = 0.85;
+export const IJOM_SUPER_FORCE_ENTITY_COUNT = Math.floor(
+  IJOM_CONCURRENT_ENTITY_CAP * 0.85,
+);
