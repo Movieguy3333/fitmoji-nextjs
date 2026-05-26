@@ -3,7 +3,6 @@
 import type { CSSProperties } from "react";
 import { useMemo, useEffect, useRef, useState, useCallback } from "react";
 
-import { getWallMaxHp } from "@/lib/swarm-village/sim/units";
 import {
   buildSwarmVillageScene,
   SWARM_VILLAGE_DEFAULT_AVATAR_ASSET,
@@ -538,7 +537,7 @@ export function SwarmVillageLiveScene({
             // Only render the bar once per cell — above the topmost wall level
             if (level !== cell.wallHeight) return null;
 
-            const wallMaxHp = getWallMaxHp(cell.wallType);
+            const wallMaxHp = cell.wallMaxHp;
             if (wallMaxHp <= 0) return null;
 
             // Show bar when: damaged at any time, OR during active wave (shows full green bar)

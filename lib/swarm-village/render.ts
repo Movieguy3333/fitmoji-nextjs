@@ -206,6 +206,7 @@ export function normalizeSwarmVillageBoardCell(
       wallHeight > 0
         ? clamp(rawWallHp ?? wallMaxHp, 0, wallMaxHp || rawWallHp || 0)
         : 0,
+    wallMaxHp: wallHeight > 0 ? wallMaxHp : 0,
     wallType,
     wallRotation: normalizeRotation(raw.wallRotation),
     soilPlacedAt:

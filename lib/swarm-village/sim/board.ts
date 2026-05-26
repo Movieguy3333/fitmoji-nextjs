@@ -14,6 +14,7 @@ export const getCell = (
     foundation: 'grass',
     wallHeight: 0,
     wallHp: 0,
+    wallMaxHp: 0,
     wallType: null,
     wallRotation: 0,
     soilPlacedAt: null,

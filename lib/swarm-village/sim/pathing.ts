@@ -184,14 +184,15 @@ export function stepEnemy(
         row: wr,
         col: wc,
         updater: (cc) => {
-          const wallMaxHp = Math.max(1, Math.round(getWallMaxHp(cc.wallType) * wallHpMultiplier));
+          const scaledMaxHp = Math.max(1, Math.round(getWallMaxHp(cc.wallType) * wallHpMultiplier));
           const nextHp = cc.wallHp - wallDamage;
           if (nextHp <= 0) {
             const nextHeight = Math.max(0, cc.wallHeight - 1);
             return {
               ...cc,
               wallHeight: nextHeight,
-              wallHp: nextHeight > 0 ? wallMaxHp : 0,
+              wallHp: nextHeight > 0 ? scaledMaxHp : 0,
+              wallMaxHp: nextHeight > 0 ? scaledMaxHp : 0,
               wallType: nextHeight > 0 ? cc.wallType : null,
             };
           }

@@ -52,7 +52,7 @@ function Slider({
   disabled: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-1">
         <div className="flex flex-col">
           <span className="text-[0.58rem] font-black uppercase tracking-[0.1em] text-[#264653]">

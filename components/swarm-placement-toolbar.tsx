@@ -24,12 +24,37 @@ type ToolDef = {
 };
 
 const TOOLS: ToolDef[] = [
-  { id: "boxer",        label: "Boxer",      sub: "Melee",   img: "/swarm-village/sprites/sudo_boxer_0.webp" },
-  { id: "tennis",       label: "Tennis",     sub: "Ranged",  img: "/swarm-village/sprites/sudo_tennis_0.webp" },
-  { id: "quarterback",  label: "QB",         sub: "Ranged",  img: "/swarm-village/sprites/sudo-football.png" },
-  { id: "wall_stone",   label: "Stone Wall", sub: "Defense", img: "/swarm-village/quest/stone_wall.png" },
-  { id: "wall_wood",    label: "Wood Fence", sub: "Defense", img: "/swarm-village/quest/wood_fence.webp" },
-  { id: "delete",       label: "Delete",     sub: "Erase" },
+  {
+    id: "boxer",
+    label: "Boxer",
+    sub: "Melee",
+    img: "/swarm-village/sprites/sudo_boxer_0.webp",
+  },
+  {
+    id: "tennis",
+    label: "Tennis",
+    sub: "Ranged",
+    img: "/swarm-village/sprites/sudo_tennis_0.webp",
+  },
+  {
+    id: "quarterback",
+    label: "Quarterback",
+    sub: "Ranged",
+    img: "/swarm-village/sprites/sudo-football.png",
+  },
+  {
+    id: "wall_stone",
+    label: "Stone Wall",
+    sub: "Defense",
+    img: "/swarm-village/quest/stone_wall.png",
+  },
+  {
+    id: "wall_wood",
+    label: "Wood Fence",
+    sub: "Defense",
+    img: "/swarm-village/quest/wood_fence.webp",
+  },
+  { id: "delete", label: "Delete", sub: "Erase" },
 ];
 
 function TrashIcon() {

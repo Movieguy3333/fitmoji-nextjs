@@ -33,6 +33,7 @@ export type SwarmVillageBoardCell = {
   foundation: SwarmVillageFoundation;
   wallHeight: number;
   wallHp: number;
+  wallMaxHp: number;
   wallType: SwarmVillageWallType;
   wallRotation: SwarmVillageRotation;
   soilPlacedAt: number | null;

@@ -143,6 +143,7 @@ export function VillagePageClient({
             wallType,
             wallHeight: 1,
             wallHp: wallMax,
+            wallMaxHp: wallMax,
             wallRotation: 0,
           };
         } else {
@@ -270,7 +271,7 @@ export function VillagePageClient({
               <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#2a9d8f]">
                 Trees
               </p>
-              <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#e9c46a]">
+              <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#6a88e9]">
                 Walls
               </p>
               <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#e76f51]">
@@ -279,218 +280,312 @@ export function VillagePageClient({
 
               {/* Trees table */}
               <table className="border-collapse text-[0.67rem]">
-                  <thead>
-                    <tr className="border-b border-[#264653]/10">
-                      <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                        Unit
-                      </th>
-                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                        Dmg
-                      </th>
-                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                        HP
-                      </th>
+                <thead>
+                  <tr className="border-b border-[#264653]/10">
+                    <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                      Unit
+                    </th>
+                    <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                      Dmg
+                    </th>
+                    <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                      HP
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(
+                    [
+                      {
+                        unit: "boxer",
+                        label: "Boxer",
+                        img: "/swarm-village/sprites/sudo_boxer_0.webp",
+                      },
+                      {
+                        unit: "tennis",
+                        label: "Tennis",
+                        img: "/swarm-village/sprites/sudo_tennis_0.webp",
+                      },
+                      {
+                        unit: "quarterback",
+                        label: "Quarterback",
+                        img: "/swarm-village/sprites/sudo-football.png",
+                      },
+                    ] as Array<{
+                      unit: "boxer" | "tennis" | "quarterback";
+                      label: string;
+                      img: string;
+                    }>
+                  ).map(({ unit, label, img }) => (
+                    <tr
+                      key={unit}
+                      className="border-b border-[#264653]/5 last:border-0"
+                    >
+                      <td className="py-1 pr-2">
+                        <div className="flex items-center gap-1.5">
+                          <img
+                            src={img}
+                            alt=""
+                            className="h-5 w-5 object-contain"
+                          />
+                          <span className="font-black text-[#264653]">
+                            {label}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-1 pl-3 text-right tabular-nums font-black">
+                        <span className="text-[#7b6f60]">
+                          {getCombatUnitDamage(unit, 1)}
+                        </span>
+                        <span className="mx-1 font-bold text-[#7b6f60]">→</span>
+                        <span
+                          className={
+                            controls.treeDamageMultiplier > 1
+                              ? "text-[#2a9d8f]"
+                              : controls.treeDamageMultiplier < 1
+                                ? "text-[#e76f51]"
+                                : "text-[#7b6f60]"
+                          }
+                        >
+                          {Math.round(
+                            getCombatUnitDamage(unit, 1) *
+                              controls.treeDamageMultiplier,
+                          )}
+                        </span>
+                      </td>
+                      <td className="py-1 pl-3 text-right tabular-nums font-black">
+                        <span className="text-[#7b6f60]">
+                          {getUnitMaxHp(unit, 1)}
+                        </span>
+                        <span className="mx-1 font-bold text-[#7b6f60]">→</span>
+                        <span
+                          className={
+                            controls.treeHpMultiplier > 1
+                              ? "text-[#2a9d8f]"
+                              : controls.treeHpMultiplier < 1
+                                ? "text-[#e76f51]"
+                                : "text-[#7b6f60]"
+                          }
+                        >
+                          {Math.round(
+                            getUnitMaxHp(unit, 1) * controls.treeHpMultiplier,
+                          )}
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {(
-                      [
-                        {
-                          unit: "boxer",
-                          label: "Boxer",
-                          img: "/swarm-village/sprites/sudo_boxer_0.webp",
-                        },
-                        {
-                          unit: "tennis",
-                          label: "Tennis",
-                          img: "/swarm-village/sprites/sudo_tennis_0.webp",
-                        },
-                        {
-                          unit: "quarterback",
-                          label: "QB",
-                          img: "/swarm-village/sprites/sudo-football.png",
-                        },
-                      ] as Array<{
-                        unit: "boxer" | "tennis" | "quarterback";
-                        label: string;
-                        img: string;
-                      }>
-                    ).map(({ unit, label, img }) => (
-                      <tr
-                        key={unit}
-                        className="border-b border-[#264653]/5 last:border-0"
-                      >
-                        <td className="py-1 pr-2">
-                          <div className="flex items-center gap-1.5">
-                            <img
-                              src={img}
-                              alt=""
-                              className="h-5 w-5 object-contain"
-                            />
-                            <span className="font-black text-[#264653]">
-                              {label}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-1 pl-3 text-right tabular-nums font-black">
-                          <span className="text-[#7b6f60]">
-                            {getCombatUnitDamage(unit, 1)}
-                          </span>
-                          <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                          <span className={controls.treeDamageMultiplier > 1 ? "text-[#2a9d8f]" : controls.treeDamageMultiplier < 1 ? "text-[#e76f51]" : "text-[#7b6f60]"}>
-                            {Math.round(getCombatUnitDamage(unit, 1) * controls.treeDamageMultiplier)}
-                          </span>
-                        </td>
-                        <td className="py-1 pl-3 text-right tabular-nums font-black">
-                          <span className="text-[#7b6f60]">
-                            {getUnitMaxHp(unit, 1)}
-                          </span>
-                          <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                          <span className={controls.treeHpMultiplier > 1 ? "text-[#2a9d8f]" : controls.treeHpMultiplier < 1 ? "text-[#e76f51]" : "text-[#7b6f60]"}>
-                            {Math.round(getUnitMaxHp(unit, 1) * controls.treeHpMultiplier)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  ))}
+                </tbody>
+              </table>
 
               {/* Walls table */}
               <table className="border-collapse text-[0.67rem]">
-                  <thead>
-                    <tr className="border-b border-[#264653]/10">
-                      <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                        Unit
-                      </th>
-                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                        HP
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(
-                      [
-                        { wallType: "stone" as const, label: "Stone", img: "/swarm-village/quest/stone_wall.png" },
-                        { wallType: "wood"  as const, label: "Wood",  img: "/swarm-village/quest/wood_fence.webp" },
-                      ]
-                    ).map(({ wallType, label, img }) => (
-                      <tr key={wallType} className="border-b border-[#264653]/5 last:border-0">
-                        <td className="py-1 pr-2">
-                          <div className="flex items-center gap-1.5">
-                            <img src={img} alt="" className="h-5 w-5 object-contain" />
-                            <span className="font-black text-[#264653]">{label}</span>
-                          </div>
-                        </td>
-                        <td className="py-1 pl-3 text-right tabular-nums font-black">
-                          <span className="text-[#7b6f60]">{getWallMaxHp(wallType)}</span>
-                          <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                          <span className={controls.wallHpMultiplier > 1 ? "text-[#2a9d8f]" : controls.wallHpMultiplier < 1 ? "text-[#e76f51]" : "text-[#7b6f60]"}>
-                            {Math.round(getWallMaxHp(wallType) * controls.wallHpMultiplier)}
+                <thead>
+                  <tr className="border-b border-[#264653]/10">
+                    <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                      Unit
+                    </th>
+                    <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                      HP
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    {
+                      wallType: "stone" as const,
+                      label: "Stone",
+                      img: "/swarm-village/quest/stone_wall.png",
+                    },
+                    {
+                      wallType: "wood" as const,
+                      label: "Wood",
+                      img: "/swarm-village/quest/wood_fence.webp",
+                    },
+                  ].map(({ wallType, label, img }) => (
+                    <tr
+                      key={wallType}
+                      className="border-b border-[#264653]/5 last:border-0"
+                    >
+                      <td className="py-1 pr-2">
+                        <div className="flex items-center gap-1.5">
+                          <img
+                            src={img}
+                            alt=""
+                            className="h-5 w-5 object-contain"
+                          />
+                          <span className="font-black text-[#264653]">
+                            {label}
                           </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                      </td>
+                      <td className="py-1 pl-3 text-right tabular-nums font-black">
+                        <span className="text-[#7b6f60]">
+                          {getWallMaxHp(wallType)}
+                        </span>
+                        <span className="mx-1 font-bold text-[#7b6f60]">→</span>
+                        <span
+                          className={
+                            controls.wallHpMultiplier > 1
+                              ? "text-[#2a9d8f]"
+                              : controls.wallHpMultiplier < 1
+                                ? "text-[#e76f51]"
+                                : "text-[#7b6f60]"
+                          }
+                        >
+                          {Math.round(
+                            getWallMaxHp(wallType) * controls.wallHpMultiplier,
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
               {/* Enemies table */}
               <table className="border-collapse text-[0.67rem]">
-                  <thead>
-                    <tr className="border-b border-[#264653]/10">
-                      <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                        Unit
-                      </th>
-                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                        Dmg
-                      </th>
-                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                        HP
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-[#264653]/5">
-                      <td className="py-1 pr-2">
-                        <div className="flex items-center gap-1.5">
-                          <img
-                            src="/regular-ijom-walk.gif"
-                            alt=""
-                            className="h-5 w-5 object-contain"
-                          />
-                          <span className="font-black text-[#264653]">
-                            Normal
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-1 pl-3 text-right tabular-nums font-black">
-                        <span className="text-[#7b6f60]">{IJOM_BASE_DAMAGE}</span>
-                        <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                        <span className={controls.ijomDamageMultiplier > 1 ? "text-[#2a9d8f]" : controls.ijomDamageMultiplier < 1 ? "text-[#e76f51]" : "text-[#7b6f60]"}>
-                          {Math.round(IJOM_BASE_DAMAGE * controls.ijomDamageMultiplier)}
+                <thead>
+                  <tr className="border-b border-[#264653]/10">
+                    <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                      Unit
+                    </th>
+                    <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                      Dmg
+                    </th>
+                    <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                      HP
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-[#264653]/5">
+                    <td className="py-1 pr-2">
+                      <div className="flex items-center gap-1.5">
+                        <img
+                          src="/regular-ijom-walk.gif"
+                          alt=""
+                          className="h-5 w-5 object-contain"
+                        />
+                        <span className="font-black text-[#264653]">
+                          Normal
                         </span>
-                      </td>
-                      <td className="py-1 pl-3 text-right tabular-nums font-black">
-                        <span className="text-[#7b6f60]">{NORMAL_IJOM_MAX_HP}</span>
-                        <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                        <span className={controls.ijomHpMultiplier > 1 ? "text-[#2a9d8f]" : controls.ijomHpMultiplier < 1 ? "text-[#e76f51]" : "text-[#7b6f60]"}>
-                          {Math.round(NORMAL_IJOM_MAX_HP * controls.ijomHpMultiplier)}
-                        </span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 pr-2">
-                        <div className="flex items-center gap-1.5">
-                          <img
-                            src="/snow-ijom-walk.gif"
-                            alt=""
-                            className="h-5 w-5 object-contain"
-                          />
-                          <span className="font-black text-[#264653]">
-                            Snow
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-1 pl-3 text-right tabular-nums font-black">
-                        <span className="text-[#7b6f60]">{IJOM_BASE_DAMAGE * SNOW_IJOM_DAMAGE_MULTIPLIER}</span>
-                        <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                        <span className={controls.ijomDamageMultiplier > 1 ? "text-[#2a9d8f]" : controls.ijomDamageMultiplier < 1 ? "text-[#e76f51]" : "text-[#7b6f60]"}>
-                          {Math.round(IJOM_BASE_DAMAGE * SNOW_IJOM_DAMAGE_MULTIPLIER * controls.ijomDamageMultiplier)}
-                        </span>
-                      </td>
-                      <td className="py-1 pl-3 text-right tabular-nums font-black">
-                        <span className="text-[#7b6f60]">{SNOW_IJOM_MAX_HP}</span>
-                        <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                        <span className={controls.ijomHpMultiplier > 1 ? "text-[#2a9d8f]" : controls.ijomHpMultiplier < 1 ? "text-[#e76f51]" : "text-[#7b6f60]"}>
-                          {Math.round(SNOW_IJOM_MAX_HP * controls.ijomHpMultiplier)}
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                      </div>
+                    </td>
+                    <td className="py-1 pl-3 text-right tabular-nums font-black">
+                      <span className="text-[#7b6f60]">{IJOM_BASE_DAMAGE}</span>
+                      <span className="mx-1 font-bold text-[#7b6f60]">→</span>
+                      <span
+                        className={
+                          controls.ijomDamageMultiplier > 1
+                            ? "text-[#2a9d8f]"
+                            : controls.ijomDamageMultiplier < 1
+                              ? "text-[#e76f51]"
+                              : "text-[#7b6f60]"
+                        }
+                      >
+                        {Math.round(
+                          IJOM_BASE_DAMAGE * controls.ijomDamageMultiplier,
+                        )}
+                      </span>
+                    </td>
+                    <td className="py-1 pl-3 text-right tabular-nums font-black">
+                      <span className="text-[#7b6f60]">
+                        {NORMAL_IJOM_MAX_HP}
+                      </span>
+                      <span className="mx-1 font-bold text-[#7b6f60]">→</span>
+                      <span
+                        className={
+                          controls.ijomHpMultiplier > 1
+                            ? "text-[#2a9d8f]"
+                            : controls.ijomHpMultiplier < 1
+                              ? "text-[#e76f51]"
+                              : "text-[#7b6f60]"
+                        }
+                      >
+                        {Math.round(
+                          NORMAL_IJOM_MAX_HP * controls.ijomHpMultiplier,
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-1 pr-2">
+                      <div className="flex items-center gap-1.5">
+                        <img
+                          src="/snow-ijom-walk.gif"
+                          alt=""
+                          className="h-5 w-5 object-contain"
+                        />
+                        <span className="font-black text-[#264653]">Snow</span>
+                      </div>
+                    </td>
+                    <td className="py-1 pl-3 text-right tabular-nums font-black">
+                      <span className="text-[#7b6f60]">
+                        {IJOM_BASE_DAMAGE * SNOW_IJOM_DAMAGE_MULTIPLIER}
+                      </span>
+                      <span className="mx-1 font-bold text-[#7b6f60]">→</span>
+                      <span
+                        className={
+                          controls.ijomDamageMultiplier > 1
+                            ? "text-[#2a9d8f]"
+                            : controls.ijomDamageMultiplier < 1
+                              ? "text-[#e76f51]"
+                              : "text-[#7b6f60]"
+                        }
+                      >
+                        {Math.round(
+                          IJOM_BASE_DAMAGE *
+                            SNOW_IJOM_DAMAGE_MULTIPLIER *
+                            controls.ijomDamageMultiplier,
+                        )}
+                      </span>
+                    </td>
+                    <td className="py-1 pl-3 text-right tabular-nums font-black">
+                      <span className="text-[#7b6f60]">{SNOW_IJOM_MAX_HP}</span>
+                      <span className="mx-1 font-bold text-[#7b6f60]">→</span>
+                      <span
+                        className={
+                          controls.ijomHpMultiplier > 1
+                            ? "text-[#2a9d8f]"
+                            : controls.ijomHpMultiplier < 1
+                              ? "text-[#e76f51]"
+                              : "text-[#7b6f60]"
+                        }
+                      >
+                        {Math.round(
+                          SNOW_IJOM_MAX_HP * controls.ijomHpMultiplier,
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             {/* Right: live stats + launch button */}
             <div className="flex flex-col items-start gap-2 sm:shrink-0 sm:items-end">
-              {swarmStatus !== "ready" && (
-                <dl className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-md border-2 border-green-500/60 bg-white/60 p-3">
-                    <dt className="font-black uppercase tracking-[0.16em] text-[#7b6f60]">
-                      Castle HP
-                    </dt>
-                    <dd className="mt-1 font-black text-green-600">
-                      {simStats.shipHp} / {SHIP_MAX_HP}
-                    </dd>
-                  </div>
-                  <div className="rounded-md border-2 border-red-500/60 bg-white/60 p-3">
-                    <dt className="font-black uppercase tracking-[0.16em] text-[#7b6f60]">
-                      Remaining
-                    </dt>
-                    <dd className="mt-1 font-black tabular-nums text-red-500">
-                      {simStats.waveRemaining} / {simStats.waveSize}
-                    </dd>
-                  </div>
-                </dl>
-              )}
+              <dl className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-md border-2 border-green-700/60 bg-white/60 p-3">
+                  <dt className="font-black uppercase tracking-[0.16em] text-[#7b6f60]">
+                    Castle HP
+                  </dt>
+                  <dd className="mt-1 font-black text-green-600">
+                    {swarmStatus === "ready"
+                      ? `${SHIP_MAX_HP} / ${SHIP_MAX_HP}`
+                      : `${simStats.shipHp} / ${SHIP_MAX_HP}`}
+                  </dd>
+                </div>
+                <div className="rounded-md border-2 border-red-500/60 bg-white/60 p-3">
+                  <dt className="font-black uppercase tracking-[0.16em] text-[#7b6f60]">
+                    Remaining
+                  </dt>
+                  <dd className="mt-1 font-black tabular-nums text-red-500">
+                    {swarmStatus === "ready"
+                      ? "0 / 0"
+                      : `${simStats.waveRemaining} / ${simStats.waveSize}`}
+                  </dd>
+                </div>
+              </dl>
               <button
                 type="button"
                 onClick={handleSwarmToggle}

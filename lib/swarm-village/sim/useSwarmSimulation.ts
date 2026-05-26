@@ -30,7 +30,7 @@ import { getPathCells, stepEnemy } from "./pathing";
 import type { Projectile } from "./tree-combat";
 import { stepTreeCombat } from "./tree-combat";
 import type { BattleStatus, BoardPatch, Enemy } from "./types";
-import { getUnitMaxHp, isUpgradeableTreeUnit } from "./units";
+import { getUnitMaxHp, getWallMaxHp, isUpgradeableTreeUnit } from "./units";
 import { randomIntBetween } from "./utils";
 
 // Internal sim parameters not exposed as user controls
@@ -119,6 +119,34 @@ function rescaleTreeHps(
 
       if (!next) next = [...board];
       next[idx] = { ...cell, unitMaxHp: targetMax, unitHp: targetHp };
+    }
+  }
+
+  return next ? { board: next, changed: true } : { board, changed: false };
+}
+
+function rescaleWallHps(
+  board: SwarmVillageBoardCell[],
+  gridCols: number,
+  hpMultiplier: number,
+): { board: SwarmVillageBoardCell[]; changed: boolean } {
+  let next: SwarmVillageBoardCell[] | null = null;
+
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < gridCols; c++) {
+      const idx = boardIndex(r, c, gridCols);
+      const cell = board[idx];
+      if (!cell || cell.wallHeight <= 0 || !cell.wallType) continue;
+
+      const baseMax = getWallMaxHp(cell.wallType);
+      const targetMax = Math.max(1, Math.round(baseMax * hpMultiplier));
+      if (cell.wallMaxHp === targetMax) continue;
+
+      const ratio = cell.wallMaxHp > 0 ? cell.wallHp / cell.wallMaxHp : 1;
+      const targetHp = Math.max(1, Math.round(targetMax * ratio));
+
+      if (!next) next = [...board];
+      next[idx] = { ...cell, wallMaxHp: targetMax, wallHp: targetHp };
     }
   }
 
@@ -276,6 +304,16 @@ export function useSwarmSimulation(args: {
       if (hpRescale.changed) {
         boardRef.current = hpRescale.board;
         setBoard(hpRescale.board);
+      }
+
+      const wallHpRescale = rescaleWallHps(
+        boardRef.current,
+        gridCols,
+        ctrl.wallHpMultiplier,
+      );
+      if (wallHpRescale.changed) {
+        boardRef.current = wallHpRescale.board;
+        setBoard(wallHpRescale.board);
       }
 
       const currentStatus = statusRef.current;
