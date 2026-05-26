@@ -125,6 +125,7 @@ export function stepEnemy(
   now: number,
   timeScale: number,
   difficultyRamp: number,
+  wallHpMultiplier = 1,
 ): {
   next: Enemy | null;
   reachedCastle: boolean;
@@ -183,7 +184,7 @@ export function stepEnemy(
         row: wr,
         col: wc,
         updater: (cc) => {
-          const wallMaxHp = getWallMaxHp(cc.wallType);
+          const wallMaxHp = Math.max(1, Math.round(getWallMaxHp(cc.wallType) * wallHpMultiplier));
           const nextHp = cc.wallHp - wallDamage;
           if (nextHp <= 0) {
             const nextHeight = Math.max(0, cc.wallHeight - 1);

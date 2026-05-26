@@ -68,6 +68,11 @@ export type SimControls = {
    * this slider affects all trees immediately.
    */
   treeHpMultiplier: number;
+  /**
+   * Scales max HP for walls and fences. Applied when a wall is placed and
+   * when a wall layer resets after being destroyed.
+   */
+  wallHpMultiplier: number;
   /** When true, trees skip firing if in-flight projectiles will already kill the target. */
   smartFire: boolean;
 };
@@ -375,6 +380,7 @@ export function useSwarmSimulation(args: {
           now,
           timeScale,
           difficultyRamp,
+          ctrl.wallHpMultiplier,
         );
         if (boardPatches.length > 0) {
           const result = applyPatches(nextBoard, boardPatches, gridCols);

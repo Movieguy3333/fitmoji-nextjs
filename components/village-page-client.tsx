@@ -48,6 +48,7 @@ const DEFAULT_CONTROLS: SimControls = {
   streakCount: 0,
   treeDamageMultiplier: 1.0,
   treeHpMultiplier: 1.0,
+  wallHpMultiplier: 1.0,
   smartFire: false,
 };
 
@@ -133,7 +134,10 @@ export function VillagePageClient({
         const cell = prev[idx]!;
         if (tool === "wall_stone" || tool === "wall_wood") {
           const wallType = tool === "wall_stone" ? "stone" : "wood";
-          const wallMax = getWallMaxHp(wallType);
+          const wallMax = Math.max(
+            1,
+            Math.round(getWallMaxHp(wallType) * controls.wallHpMultiplier),
+          );
           next[idx] = {
             ...cell,
             wallType,
@@ -178,6 +182,7 @@ export function VillagePageClient({
       editedBoard,
       controls.treeHpMultiplier,
       controls.treeDamageMultiplier,
+      controls.wallHpMultiplier,
     ],
   );
 
@@ -260,10 +265,13 @@ export function VillagePageClient({
             {/* Left: village name + player */}
 
             {/* Center: stat tables */}
-            <div className="flex-1 grid grid-cols-2 items-start gap-x-5">
+            <div className="flex-1 grid grid-cols-3 items-start gap-x-5">
               {/* Labels row */}
               <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#2a9d8f]">
                 Trees
+              </p>
+              <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#e9c46a]">
+                Walls
               </p>
               <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#e76f51]">
                 Enemies
@@ -340,6 +348,44 @@ export function VillagePageClient({
                           <span className="mx-1 font-bold text-[#7b6f60]">→</span>
                           <span className={controls.treeHpMultiplier > 1 ? "text-[#2a9d8f]" : controls.treeHpMultiplier < 1 ? "text-[#e76f51]" : "text-[#7b6f60]"}>
                             {Math.round(getUnitMaxHp(unit, 1) * controls.treeHpMultiplier)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+              {/* Walls table */}
+              <table className="border-collapse text-[0.67rem]">
+                  <thead>
+                    <tr className="border-b border-[#264653]/10">
+                      <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        Unit
+                      </th>
+                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        HP
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(
+                      [
+                        { wallType: "stone" as const, label: "Stone", img: "/swarm-village/quest/stone_wall.png" },
+                        { wallType: "wood"  as const, label: "Wood",  img: "/swarm-village/quest/wood_fence.webp" },
+                      ]
+                    ).map(({ wallType, label, img }) => (
+                      <tr key={wallType} className="border-b border-[#264653]/5 last:border-0">
+                        <td className="py-1 pr-2">
+                          <div className="flex items-center gap-1.5">
+                            <img src={img} alt="" className="h-5 w-5 object-contain" />
+                            <span className="font-black text-[#264653]">{label}</span>
+                          </div>
+                        </td>
+                        <td className="py-1 pl-3 text-right tabular-nums font-black">
+                          <span className="text-[#7b6f60]">{getWallMaxHp(wallType)}</span>
+                          <span className="mx-1 font-bold text-[#7b6f60]">→</span>
+                          <span className={controls.wallHpMultiplier > 1 ? "text-[#2a9d8f]" : controls.wallHpMultiplier < 1 ? "text-[#e76f51]" : "text-[#7b6f60]"}>
+                            {Math.round(getWallMaxHp(wallType) * controls.wallHpMultiplier)}
                           </span>
                         </td>
                       </tr>
