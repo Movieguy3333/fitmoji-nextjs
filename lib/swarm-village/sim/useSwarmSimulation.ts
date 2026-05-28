@@ -20,8 +20,6 @@ import {
 } from "./constants";
 import {
   getEnemySpawnPosition,
-  getIjomDamageForVariant,
-  getIjomMaxHpForVariant,
   getIjomPackSize,
   getIncomingWaveSize,
   getNextSpawnPackSize,
@@ -30,7 +28,7 @@ import { getPathCells, stepEnemy } from "./pathing";
 import type { Projectile } from "./tree-combat";
 import { stepTreeCombat } from "./tree-combat";
 import type { BattleStatus, BoardPatch, Enemy } from "./types";
-import { getUnitMaxHp, getWallMaxHp, isUpgradeableTreeUnit } from "./units";
+import { getUnitMaxHp, isUpgradeableTreeUnit } from "./units";
 import { randomIntBetween } from "./utils";
 
 // Internal sim parameters not exposed as user controls
@@ -41,38 +39,32 @@ const CASTLE_DAMAGE_BASE = 14;
 
 export type SimControls = {
   isSwarmActive: boolean;
-  /** Scales attack damage for enemies */
-  ijomDamageMultiplier: number;
-  /** Scales max HP for enemies*/
-  ijomHpMultiplier: number;
+
+  // Tree combat values (direct, at level 1 — higher levels scale proportionally)
+  boxerDamage: number;
+  boxerHp: number;
+  tennisDamage: number;
+  tennisHp: number;
+  quarterbackDamage: number;
+  quarterbackHp: number;
+
+  // Wall HP (direct, per wall type)
+  stoneWallHp: number;
+  woodWallHp: number;
+
+  // Enemy values (direct, for a pack-size-1 unit)
+  normalEnemyDamage: number;
+  normalEnemyHp: number;
+  snowEnemyDamage: number;
+  snowEnemyHp: number;
+
   /** Scales enemy movement speed. */
   enemySpeedMultiplier: number;
   /** Scales enemy spawn time interval. */
   enemySpawnIntervalMs: number;
-  
-  /** chance of spawning a snow Ijom*/
+  /** Chance of spawning a snow Ijom. */
   snowIjomSpawnChance: number;
-  /** */
   streakCount: number;
-
-  /**
-   * Scales attack damage for combat trees. Applied live in stepTreeCombat —
-   * every tree's damage is `getCombatUnitDamage(...) * treeDamageMultiplier`,
-   * so changing this slider affects all trees immediately.
-   */
-  treeDamageMultiplier: number;
-  /**
-   * Scales max HP for combat trees. Applied live in the tick loop — every
-   * tree's unitMaxHp is rescaled to `getUnitMaxHp(...) * treeHpMultiplier`
-   * each tick (with unitHp scaled to preserve health ratio), so changing
-   * this slider affects all trees immediately.
-   */
-  treeHpMultiplier: number;
-  /**
-   * Scales max HP for walls and fences. Applied when a wall is placed and
-   * when a wall layer resets after being destroyed.
-   */
-  wallHpMultiplier: number;
   /** When true, trees skip firing if in-flight projectiles will already kill the target. */
   smartFire: boolean;
 };
@@ -91,16 +83,13 @@ function makeFreshBoard(
 
 /**
  * Rescales every combat tree on the board so its `unitMaxHp` matches the
- * current `treeHpMultiplier`, preserving each tree's health ratio. Returns
- * the same board unchanged if nothing needs updating (no allocation).
- *
- * Called at the top of each tick so the HP slider drives all trees live —
- * map-loaded trees AND user-placed trees — including while the wave is idle.
+ * per-unit HP values, preserving each tree's health ratio. Called every tick
+ * so HP inputs drive all trees live — map-loaded and user-placed alike.
  */
 function rescaleTreeHps(
   board: SwarmVillageBoardCell[],
   gridCols: number,
-  hpMultiplier: number,
+  hpByUnit: { boxer: number; tennis: number; quarterback: number },
 ): { board: SwarmVillageBoardCell[]; changed: boolean } {
   let next: SwarmVillageBoardCell[] | null = null;
 
@@ -110,8 +99,12 @@ function rescaleTreeHps(
       const cell = board[idx];
       if (!cell || !isUpgradeableTreeUnit(cell.unit)) continue;
 
-      const baseMax = getUnitMaxHp(cell.unit, cell.unitLevel || 1);
-      const targetMax = Math.max(1, Math.round(baseMax * hpMultiplier));
+      const unit = cell.unit;
+      const level = cell.unitLevel || 1;
+      const baseL1 = hpByUnit[unit];
+      const l1Hp = getUnitMaxHp(unit, 1);
+      const lNHp = getUnitMaxHp(unit, level);
+      const targetMax = Math.max(1, Math.round(baseL1 * (lNHp / l1Hp)));
       if (cell.unitMaxHp === targetMax) continue;
 
       const ratio = cell.unitMaxHp > 0 ? cell.unitHp / cell.unitMaxHp : 1;
@@ -128,7 +121,8 @@ function rescaleTreeHps(
 function rescaleWallHps(
   board: SwarmVillageBoardCell[],
   gridCols: number,
-  hpMultiplier: number,
+  stoneWallHp: number,
+  woodWallHp: number,
 ): { board: SwarmVillageBoardCell[]; changed: boolean } {
   let next: SwarmVillageBoardCell[] | null = null;
 
@@ -138,8 +132,7 @@ function rescaleWallHps(
       const cell = board[idx];
       if (!cell || cell.wallHeight <= 0 || !cell.wallType) continue;
 
-      const baseMax = getWallMaxHp(cell.wallType);
-      const targetMax = Math.max(1, Math.round(baseMax * hpMultiplier));
+      const targetMax = Math.max(1, Math.round(cell.wallType === 'stone' ? stoneWallHp : woodWallHp));
       if (cell.wallMaxHp === targetMax) continue;
 
       const ratio = cell.wallMaxHp > 0 ? cell.wallHp / cell.wallMaxHp : 1;
@@ -173,8 +166,10 @@ function spawnEnemy(
   enemies: Enemy[],
   gridCols: number,
   now: number,
-  ijomDamageMultiplier: number,
-  ijomHpMultiplier: number,
+  normalEnemyDamage: number,
+  normalEnemyHp: number,
+  snowEnemyDamage: number,
+  snowEnemyHp: number,
   speedMultiplier: number,
   snowIjomSpawnChance: number,
   waveSize: number,
@@ -199,13 +194,10 @@ function spawnEnemy(
     IJOM_VILLAGE_SPEED_SCALE *
     IJOM_SPEED_MULTIPLIER;
 
-  const baseMaxHp = getIjomMaxHpForVariant(variant, packSize);
-  const maxHp = Math.round(baseMaxHp * ijomHpMultiplier);
-  const damage = getIjomDamageForVariant(
-    variant,
-    IJOM_BASE_DAMAGE * ijomDamageMultiplier,
-    packSize,
-  );
+  const baseHp = variant === "snow" ? snowEnemyHp : normalEnemyHp;
+  const maxHp = Math.round(baseHp * packSize);
+  const baseDmg = variant === "snow" ? snowEnemyDamage : normalEnemyDamage;
+  const damage = baseDmg * packSize;
 
   return {
     enemy: {
@@ -293,13 +285,13 @@ export function useSwarmSimulation(args: {
       let hp = shipHpRef.current;
       let ws = waveSpawnedRef.current;
 
-      // Rescale tree HPs to match the current treeHpMultiplier slider. Runs
-      // every tick (including idle / pre-wave) so HP responds in real time to
-      // slider changes for both map-loaded and user-placed trees.
+      // Rescale tree HPs to match the current per-unit HP values. Runs every
+      // tick (including idle / pre-wave) so HP responds in real time to input
+      // changes for both map-loaded and user-placed trees.
       const hpRescale = rescaleTreeHps(
         boardRef.current,
         gridCols,
-        ctrl.treeHpMultiplier,
+        { boxer: ctrl.boxerHp, tennis: ctrl.tennisHp, quarterback: ctrl.quarterbackHp },
       );
       if (hpRescale.changed) {
         boardRef.current = hpRescale.board;
@@ -309,7 +301,8 @@ export function useSwarmSimulation(args: {
       const wallHpRescale = rescaleWallHps(
         boardRef.current,
         gridCols,
-        ctrl.wallHpMultiplier,
+        ctrl.stoneWallHp,
+        ctrl.woodWallHp,
       );
       if (wallHpRescale.changed) {
         boardRef.current = wallHpRescale.board;
@@ -387,8 +380,10 @@ export function useSwarmSimulation(args: {
           ens,
           gridCols,
           now,
-          ctrl.ijomDamageMultiplier,
-          ctrl.ijomHpMultiplier,
+          ctrl.normalEnemyDamage,
+          ctrl.normalEnemyHp,
+          ctrl.snowEnemyDamage,
+          ctrl.snowEnemyHp,
           ctrl.enemySpeedMultiplier,
           ctrl.snowIjomSpawnChance,
           WAVE_SIZE,
@@ -418,7 +413,8 @@ export function useSwarmSimulation(args: {
           now,
           timeScale,
           difficultyRamp,
-          ctrl.wallHpMultiplier,
+          ctrl.stoneWallHp,
+          ctrl.woodWallHp,
         );
         if (boardPatches.length > 0) {
           const result = applyPatches(nextBoard, boardPatches, gridCols);
@@ -432,7 +428,7 @@ export function useSwarmSimulation(args: {
             const packSize = getIjomPackSize(enemy);
             hp = Math.max(
               0,
-              hp - Math.round(CASTLE_DAMAGE_BASE * ctrl.ijomDamageMultiplier * packSize),
+              hp - Math.round(CASTLE_DAMAGE_BASE * (ctrl.normalEnemyDamage / IJOM_BASE_DAMAGE) * packSize),
             );
           }
         } else {
@@ -453,7 +449,7 @@ export function useSwarmSimulation(args: {
         enemies: ens,
         projectiles: projectilesRef.current,
         now,
-        damageMultiplier: ctrl.treeDamageMultiplier,
+        treeDamages: { boxer: ctrl.boxerDamage, tennis: ctrl.tennisDamage, quarterback: ctrl.quarterbackDamage },
         nextProjectileId,
         smartFire: ctrl.smartFire,
       });

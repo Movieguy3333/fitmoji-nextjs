@@ -111,8 +111,6 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
   const set = <K extends keyof SimControls>(key: K, val: SimControls[K]) =>
     onChange({ ...value, [key]: val });
 
-  const fmtMult = (v: number) => `${v.toFixed(2)}×`;
-  const fmtMs = (v: number) => `${v.toFixed(0)}ms`;
   const fmtPercent = (v: number) => `${(v * 100).toFixed(0)}%`;
   const fmt = (v: number) => `${v.toFixed(0)}`;
 
@@ -163,28 +161,6 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
                 Trees
               </p>
 
-              <Slider
-                label="Damage"
-                value={value.treeDamageMultiplier}
-                min={0.25}
-                max={5}
-                step={0.25}
-                display={fmtMult}
-                onChange={(v) => set("treeDamageMultiplier", v)}
-                disabled={swarmLocked}
-              />
-
-              <Slider
-                label="HP"
-                value={value.treeHpMultiplier}
-                min={0.25}
-                max={3}
-                step={0.25}
-                display={fmtMult}
-                onChange={(v) => set("treeHpMultiplier", v)}
-                disabled={swarmLocked}
-              />
-
               {/* Smart Fire toggle */}
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
@@ -216,26 +192,6 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
 
             <div className="border-t border-[#264653]/10" />
 
-            {/* ── Walls ── */}
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[0.48rem] font-black uppercase tracking-[0.18em] text-[#e9c46a]">
-                Walls
-              </p>
-
-              <Slider
-                label="HP"
-                value={value.wallHpMultiplier}
-                min={0.25}
-                max={5}
-                step={0.25}
-                display={fmtMult}
-                onChange={(v) => set("wallHpMultiplier", v)}
-                disabled={swarmLocked}
-              />
-            </div>
-
-            <div className="border-t border-[#264653]/10" />
-
             {/* ── Enemies ── */}
             <div className="flex flex-col gap-1.5">
               <p className="text-[0.48rem] font-black uppercase tracking-[0.18em] text-[#e76f51]">
@@ -243,34 +199,11 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
               </p>
 
               <Slider
-                label="Damage"
-                value={value.ijomDamageMultiplier}
-                min={0.25}
-                max={5}
-                step={0.25}
-                display={fmtMult}
-                onChange={(v) => set("ijomDamageMultiplier", v)}
-                disabled={swarmLocked}
-              />
-
-              <Slider
-                label="HP"
-                value={value.ijomHpMultiplier}
-                min={0.25}
-                max={3}
-                step={0.25}
-                display={fmtMult}
-                onChange={(v) => set("ijomHpMultiplier", v)}
-                disabled={swarmLocked}
-              />
-
-              <Slider
                 label="Speed"
                 value={value.enemySpeedMultiplier}
                 min={0.25}
                 max={5}
                 step={0.25}
-                display={fmtMult}
                 onChange={(v) => set("enemySpeedMultiplier", v)}
                 disabled={swarmLocked}
               />
@@ -281,7 +214,6 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
                 min={0}
                 max={3000}
                 step={50}
-                display={fmtMs}
                 onChange={(v) => set("enemySpawnIntervalMs", v)}
                 disabled={swarmLocked}
               />
@@ -298,7 +230,7 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
               />
 
               <Slider
-                label="Snow spawn chance"
+                label="Driller spawn chance"
                 value={value.snowIjomSpawnChance}
                 min={0}
                 max={1}

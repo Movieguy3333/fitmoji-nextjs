@@ -131,7 +131,7 @@ export function stepTreeCombat(args: {
   enemies: Enemy[];
   projectiles: Projectile[];
   now: number;
-  damageMultiplier: number;
+  treeDamages: { boxer: number; tennis: number; quarterback: number };
   nextProjectileId: () => string;
   smartFire: boolean;
 }): {
@@ -139,7 +139,7 @@ export function stepTreeCombat(args: {
   boardPatches: BoardPatch[];
   enemyDamage: Map<string, number>;
 } {
-  const { board, gridCols, enemies, projectiles, now, damageMultiplier, nextProjectileId, smartFire } = args;
+  const { board, gridCols, enemies, projectiles, now, treeDamages, nextProjectileId, smartFire } = args;
   const boardPatches: BoardPatch[] = [];
   const spawnedProjectiles: Projectile[] = [];
   const enemyDamage = new Map<string, number>();
@@ -184,7 +184,11 @@ export function stepTreeCombat(args: {
       if (targetIndex < 0) continue;
 
       const target = enemies[targetIndex]!;
-      const damage = getCombatUnitDamage(unit, getTreeLevel(cell)) * damageMultiplier;
+      const level = getTreeLevel(cell);
+      const dmgAtL1 = treeDamages[unit];
+      const damage = level <= 1
+        ? dmgAtL1
+        : dmgAtL1 * (getCombatUnitDamage(unit, level) / getCombatUnitDamage(unit, 1));
 
       // Smart fire: skip if in-flight damage will already finish off the target
       if (smartFire && committedDamage) {

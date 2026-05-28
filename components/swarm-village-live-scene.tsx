@@ -95,9 +95,9 @@ function toEntityStyle(
 
 // ── HP bar ────────────────────────────────────────────────────────────────────
 
-function HpBar({ hp, maxHp }: { hp: number; maxHp: number }) {
+function HpBar({ hp, maxHp, fillColor }: { hp: number; maxHp: number; fillColor?: string }) {
   const pct = maxHp > 0 ? Math.max(0, Math.min(1, hp / maxHp)) : 0;
-  const color = pct > 0.5 ? "#2a9d8f" : pct > 0.25 ? "#e9c46a" : "#e76f51";
+  const color = fillColor ?? (pct > 0.5 ? "#2a9d8f" : pct > 0.25 ? "#e9c46a" : "#e76f51");
   return (
     <div
       style={{
@@ -559,7 +559,7 @@ export function SwarmVillageLiveScene({
                   pointerEvents: "none",
                 }}
               >
-                <HpBar hp={cell.wallHp} maxHp={wallMaxHp} />
+                <HpBar hp={cell.wallHp} maxHp={wallMaxHp} fillColor="#8a9ba8" />
               </div>
             );
           })}

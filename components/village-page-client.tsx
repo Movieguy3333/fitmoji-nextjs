@@ -40,15 +40,22 @@ type Props = {
 
 const DEFAULT_CONTROLS: SimControls = {
   isSwarmActive: false,
-  ijomDamageMultiplier: 1.0,
-  ijomHpMultiplier: 1.0,
+  boxerDamage: getCombatUnitDamage("boxer", 1),
+  boxerHp: getUnitMaxHp("boxer", 1),
+  tennisDamage: getCombatUnitDamage("tennis", 1),
+  tennisHp: getUnitMaxHp("tennis", 1),
+  quarterbackDamage: getCombatUnitDamage("quarterback", 1),
+  quarterbackHp: getUnitMaxHp("quarterback", 1),
+  stoneWallHp: getWallMaxHp("stone"),
+  woodWallHp: getWallMaxHp("wood"),
+  normalEnemyDamage: IJOM_BASE_DAMAGE,
+  normalEnemyHp: NORMAL_IJOM_MAX_HP,
+  snowEnemyDamage: IJOM_BASE_DAMAGE * SNOW_IJOM_DAMAGE_MULTIPLIER,
+  snowEnemyHp: SNOW_IJOM_MAX_HP,
   enemySpeedMultiplier: 1.0,
   enemySpawnIntervalMs: 700,
   snowIjomSpawnChance: 0.2,
   streakCount: 0,
-  treeDamageMultiplier: 1.0,
-  treeHpMultiplier: 1.0,
-  wallHpMultiplier: 1.0,
   smartFire: false,
 };
 
@@ -60,6 +67,26 @@ export function VillagePageClient({
   tagline,
 }: Props) {
   const [controls, setControls] = useState<SimControls>(DEFAULT_CONTROLS);
+  const [inputValues, setInputValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      (
+        [
+          "boxerDamage",
+          "boxerHp",
+          "tennisDamage",
+          "tennisHp",
+          "quarterbackDamage",
+          "quarterbackHp",
+          "stoneWallHp",
+          "woodWallHp",
+          "normalEnemyDamage",
+          "normalEnemyHp",
+          "snowEnemyDamage",
+          "snowEnemyHp",
+        ] as const
+      ).map((k) => [k, String(DEFAULT_CONTROLS[k])]),
+    ),
+  );
   const [swarmStatus, setSwarmStatus] = useState<BattleStatus>("ready");
   const [simStats, setSimStats] = useState<SimStats>({
     shipHp: SHIP_MAX_HP,
@@ -80,6 +107,35 @@ export function VillagePageClient({
 
   function handleSwarmToggle() {
     setControls((prev) => ({ ...prev, isSwarmActive: !prev.isSwarmActive }));
+  }
+
+  type DirectValueKey =
+    | "boxerDamage"
+    | "boxerHp"
+    | "tennisDamage"
+    | "tennisHp"
+    | "quarterbackDamage"
+    | "quarterbackHp"
+    | "stoneWallHp"
+    | "woodWallHp"
+    | "normalEnemyDamage"
+    | "normalEnemyHp"
+    | "snowEnemyDamage"
+    | "snowEnemyHp";
+
+  function handleValueChange(key: DirectValueKey, str: string) {
+    setInputValues((prev) => ({ ...prev, [key]: str }));
+    const num = parseFloat(str);
+    if (!isNaN(num) && num > 0) {
+      setControls((prev) => ({ ...prev, [key]: num }));
+    }
+  }
+
+  function handleValueBlur(key: DirectValueKey) {
+    setControls((prev) => {
+      setInputValues((iv) => ({ ...iv, [key]: String(prev[key]) }));
+      return prev;
+    });
   }
 
   function handleSwarmStatusChange(status: BattleStatus) {
@@ -136,7 +192,9 @@ export function VillagePageClient({
           const wallType = tool === "wall_stone" ? "stone" : "wood";
           const wallMax = Math.max(
             1,
-            Math.round(getWallMaxHp(wallType) * controls.wallHpMultiplier),
+            Math.round(
+              wallType === "stone" ? controls.stoneWallHp : controls.woodWallHp,
+            ),
           );
           next[idx] = {
             ...cell,
@@ -148,15 +206,12 @@ export function VillagePageClient({
           };
         } else {
           const unit = tool as "boxer" | "tennis" | "quarterback";
-          // Apply the HP multiplier so the tree starts the next tick with the
-          // right HP (otherwise there would be a one-tick flash at base HP
-          // before the simulation's rescaler catches up). The simulation tick
-          // is the source of truth and will keep this in sync as the slider
-          // moves. Damage is fully live — applied at attack time.
-          const maxHp = Math.max(
-            1,
-            Math.round(getUnitMaxHp(unit, 1) * controls.treeHpMultiplier),
-          );
+          const hpByUnit = {
+            boxer: controls.boxerHp,
+            tennis: controls.tennisHp,
+            quarterback: controls.quarterbackHp,
+          };
+          const maxHp = Math.max(1, Math.round(hpByUnit[unit]));
           next[idx] = {
             ...cell,
             unit,
@@ -181,9 +236,11 @@ export function VillagePageClient({
       map.board,
       map.gridCols,
       editedBoard,
-      controls.treeHpMultiplier,
-      controls.treeDamageMultiplier,
-      controls.wallHpMultiplier,
+      controls.boxerHp,
+      controls.tennisHp,
+      controls.quarterbackHp,
+      controls.stoneWallHp,
+      controls.woodWallHp,
     ],
   );
 
@@ -221,6 +278,29 @@ export function VillagePageClient({
     },
     [tool, swarmStatus, placedKeys, map.board, map.gridCols, editedBoard],
   );
+
+  function valueColor(key: DirectValueKey) {
+    const cur = controls[key] as number;
+    const def = DEFAULT_CONTROLS[key] as number;
+    if (cur > def) return "text-[#2a9d8f]";
+    if (cur < def) return "text-[#e76f51]";
+    return "text-[#264653]";
+  }
+
+  function statInput(key: DirectValueKey, accentRing: string) {
+    return (
+      <input
+        type="number"
+        min="0"
+        step="1"
+        value={inputValues[key] ?? ""}
+        disabled={swarmLocked}
+        onChange={(e) => handleValueChange(key, e.target.value)}
+        onBlur={() => handleValueBlur(key)}
+        className={`w-14 rounded border border-[#264653]/20 bg-white/60 px-1 py-0.5 text-right text-[0.6rem] font-black tabular-nums focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50 ${accentRing} ${valueColor(key)}`}
+      />
+    );
+  }
 
   return (
     <>
@@ -260,311 +340,208 @@ export function VillagePageClient({
         disabled={swarmStatus !== "ready"}
       />
 
-      <section className="absolute inset-x-4 bottom-4 z-[900] sm:inset-x-8 sm:bottom-8">
-        <div className="mx-auto max-w-5xl rounded-lg border border-white/45 bg-[#fffefa]/88 p-4 shadow-[0_24px_70px_rgba(8,16,24,0.22)] backdrop-blur-md sm:p-5">
+      <section className="absolute inset-x-2 bottom-2 z-[900] max-h-[55vh] sm:inset-x-8 sm:bottom-8 sm:max-h-none">
+        <div className="mx-auto max-w-5xl overflow-y-auto rounded-lg border border-white/45 bg-[#fffefa]/88 p-4 shadow-[0_24px_70px_rgba(8,16,24,0.22)] backdrop-blur-md sm:overflow-visible sm:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
             {/* Left: village name + player */}
 
             {/* Center: stat tables */}
-            <div className="flex-1 grid grid-cols-3 items-start gap-x-5">
-              {/* Labels row */}
-              <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#2a9d8f]">
-                Trees
-              </p>
-              <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#6a88e9]">
-                Walls
-              </p>
-              <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#e76f51]">
-                Enemies
-              </p>
+            <div className="min-w-0 flex-1 overflow-x-auto">
+              <div className="grid min-w-[380px] grid-cols-3 items-start gap-x-5">
+                {/* Labels row */}
+                <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#2a9d8f]">
+                  Trees
+                </p>
+                <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#6a88e9]">
+                  Walls
+                </p>
+                <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#e76f51]">
+                  Enemies
+                </p>
 
-              {/* Trees table */}
-              <table className="border-collapse text-[0.67rem]">
-                <thead>
-                  <tr className="border-b border-[#264653]/10">
-                    <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                      Unit
-                    </th>
-                    <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                      Dmg
-                    </th>
-                    <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                      HP
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(
-                    [
+                {/* Trees table */}
+                <table className="border-collapse text-[0.67rem]">
+                  <thead>
+                    <tr className="border-b border-[#264653]/10">
+                      <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        Unit
+                      </th>
+                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        Dmg
+                      </th>
+                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        HP
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(
+                      [
+                        {
+                          label: "Boxer",
+                          img: "/swarm-village/sprites/sudo_boxer_0.webp",
+                          dmgKey: "boxerDamage",
+                          hpKey: "boxerHp",
+                        },
+                        {
+                          label: "Tennis",
+                          img: "/swarm-village/sprites/sudo_tennis_0.webp",
+                          dmgKey: "tennisDamage",
+                          hpKey: "tennisHp",
+                        },
+                        {
+                          label: "Quarterback",
+                          img: "/swarm-village/sprites/sudo-football.png",
+                          dmgKey: "quarterbackDamage",
+                          hpKey: "quarterbackHp",
+                        },
+                      ] as Array<{
+                        label: string;
+                        img: string;
+                        dmgKey: DirectValueKey;
+                        hpKey: DirectValueKey;
+                      }>
+                    ).map(({ label, img, dmgKey, hpKey }) => (
+                      <tr
+                        key={label}
+                        className="border-b border-[#264653]/5 last:border-0"
+                      >
+                        <td className="py-1 pr-2">
+                          <div className="flex items-center gap-1.5">
+                            <img
+                              src={img}
+                              alt=""
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span className="font-black text-[#264653]">
+                              {label}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-1 pl-2 text-right">
+                          {statInput(dmgKey, "focus:ring-[#2a9d8f]")}
+                        </td>
+                        <td className="py-1 pl-2 text-right">
+                          {statInput(hpKey, "focus:ring-[#2a9d8f]")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Walls table */}
+                <table className="border-collapse text-[0.67rem]">
+                  <thead>
+                    <tr className="border-b border-[#264653]/10">
+                      <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        Unit
+                      </th>
+                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        HP
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
                       {
-                        unit: "boxer",
-                        label: "Boxer",
-                        img: "/swarm-village/sprites/sudo_boxer_0.webp",
+                        label: "Stone",
+                        img: "/swarm-village/quest/stone_wall.png",
+                        hpKey: "stoneWallHp" as DirectValueKey,
                       },
                       {
-                        unit: "tennis",
-                        label: "Tennis",
-                        img: "/swarm-village/sprites/sudo_tennis_0.webp",
+                        label: "Wood",
+                        img: "/swarm-village/quest/wood_fence.webp",
+                        hpKey: "woodWallHp" as DirectValueKey,
                       },
-                      {
-                        unit: "quarterback",
-                        label: "Quarterback",
-                        img: "/swarm-village/sprites/sudo-football.png",
-                      },
-                    ] as Array<{
-                      unit: "boxer" | "tennis" | "quarterback";
-                      label: string;
-                      img: string;
-                    }>
-                  ).map(({ unit, label, img }) => (
-                    <tr
-                      key={unit}
-                      className="border-b border-[#264653]/5 last:border-0"
-                    >
+                    ].map(({ label, img, hpKey }) => (
+                      <tr
+                        key={label}
+                        className="border-b border-[#264653]/5 last:border-0"
+                      >
+                        <td className="py-1 pr-2">
+                          <div className="flex items-center gap-1.5">
+                            <img
+                              src={img}
+                              alt=""
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span className="font-black text-[#264653]">
+                              {label}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-1 pl-2 text-right">
+                          {statInput(hpKey, "focus:ring-[#6a88e9]")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Enemies table */}
+                <table className="border-collapse text-[0.67rem]">
+                  <thead>
+                    <tr className="border-b border-[#264653]/10">
+                      <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        Unit
+                      </th>
+                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        Dmg
+                      </th>
+                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        HP
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-[#264653]/5">
                       <td className="py-1 pr-2">
                         <div className="flex items-center gap-1.5">
                           <img
-                            src={img}
+                            src="/regular-ijom-walk.gif"
                             alt=""
                             className="h-5 w-5 object-contain"
                           />
                           <span className="font-black text-[#264653]">
-                            {label}
+                            Normal
                           </span>
                         </div>
                       </td>
-                      <td className="py-1 pl-3 text-right tabular-nums font-black">
-                        <span className="text-[#7b6f60]">
-                          {getCombatUnitDamage(unit, 1)}
-                        </span>
-                        <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                        <span
-                          className={
-                            controls.treeDamageMultiplier > 1
-                              ? "text-[#2a9d8f]"
-                              : controls.treeDamageMultiplier < 1
-                                ? "text-[#e76f51]"
-                                : "text-[#7b6f60]"
-                          }
-                        >
-                          {Math.round(
-                            getCombatUnitDamage(unit, 1) *
-                              controls.treeDamageMultiplier,
-                          )}
-                        </span>
+                      <td className="py-1 pl-2 text-right">
+                        {statInput("normalEnemyDamage", "focus:ring-[#e76f51]")}
                       </td>
-                      <td className="py-1 pl-3 text-right tabular-nums font-black">
-                        <span className="text-[#7b6f60]">
-                          {getUnitMaxHp(unit, 1)}
-                        </span>
-                        <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                        <span
-                          className={
-                            controls.treeHpMultiplier > 1
-                              ? "text-[#2a9d8f]"
-                              : controls.treeHpMultiplier < 1
-                                ? "text-[#e76f51]"
-                                : "text-[#7b6f60]"
-                          }
-                        >
-                          {Math.round(
-                            getUnitMaxHp(unit, 1) * controls.treeHpMultiplier,
-                          )}
-                        </span>
+                      <td className="py-1 pl-2 text-right">
+                        {statInput("normalEnemyHp", "focus:ring-[#e76f51]")}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Walls table */}
-              <table className="border-collapse text-[0.67rem]">
-                <thead>
-                  <tr className="border-b border-[#264653]/10">
-                    <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                      Unit
-                    </th>
-                    <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                      HP
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    {
-                      wallType: "stone" as const,
-                      label: "Stone",
-                      img: "/swarm-village/quest/stone_wall.png",
-                    },
-                    {
-                      wallType: "wood" as const,
-                      label: "Wood",
-                      img: "/swarm-village/quest/wood_fence.webp",
-                    },
-                  ].map(({ wallType, label, img }) => (
-                    <tr
-                      key={wallType}
-                      className="border-b border-[#264653]/5 last:border-0"
-                    >
+                    <tr>
                       <td className="py-1 pr-2">
                         <div className="flex items-center gap-1.5">
                           <img
-                            src={img}
+                            src="/snow-ijom-walk.gif"
                             alt=""
                             className="h-5 w-5 object-contain"
                           />
                           <span className="font-black text-[#264653]">
-                            {label}
+                            Driller
                           </span>
                         </div>
                       </td>
-                      <td className="py-1 pl-3 text-right tabular-nums font-black">
-                        <span className="text-[#7b6f60]">
-                          {getWallMaxHp(wallType)}
-                        </span>
-                        <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                        <span
-                          className={
-                            controls.wallHpMultiplier > 1
-                              ? "text-[#2a9d8f]"
-                              : controls.wallHpMultiplier < 1
-                                ? "text-[#e76f51]"
-                                : "text-[#7b6f60]"
-                          }
-                        >
-                          {Math.round(
-                            getWallMaxHp(wallType) * controls.wallHpMultiplier,
-                          )}
-                        </span>
+                      <td className="py-1 pl-2 text-right">
+                        {statInput("snowEnemyDamage", "focus:ring-[#e76f51]")}
+                      </td>
+                      <td className="py-1 pl-2 text-right">
+                        {statInput("snowEnemyHp", "focus:ring-[#e76f51]")}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Enemies table */}
-              <table className="border-collapse text-[0.67rem]">
-                <thead>
-                  <tr className="border-b border-[#264653]/10">
-                    <th className="pb-1 text-left font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                      Unit
-                    </th>
-                    <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                      Dmg
-                    </th>
-                    <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
-                      HP
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-[#264653]/5">
-                    <td className="py-1 pr-2">
-                      <div className="flex items-center gap-1.5">
-                        <img
-                          src="/regular-ijom-walk.gif"
-                          alt=""
-                          className="h-5 w-5 object-contain"
-                        />
-                        <span className="font-black text-[#264653]">
-                          Normal
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-1 pl-3 text-right tabular-nums font-black">
-                      <span className="text-[#7b6f60]">{IJOM_BASE_DAMAGE}</span>
-                      <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                      <span
-                        className={
-                          controls.ijomDamageMultiplier > 1
-                            ? "text-[#2a9d8f]"
-                            : controls.ijomDamageMultiplier < 1
-                              ? "text-[#e76f51]"
-                              : "text-[#7b6f60]"
-                        }
-                      >
-                        {Math.round(
-                          IJOM_BASE_DAMAGE * controls.ijomDamageMultiplier,
-                        )}
-                      </span>
-                    </td>
-                    <td className="py-1 pl-3 text-right tabular-nums font-black">
-                      <span className="text-[#7b6f60]">
-                        {NORMAL_IJOM_MAX_HP}
-                      </span>
-                      <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                      <span
-                        className={
-                          controls.ijomHpMultiplier > 1
-                            ? "text-[#2a9d8f]"
-                            : controls.ijomHpMultiplier < 1
-                              ? "text-[#e76f51]"
-                              : "text-[#7b6f60]"
-                        }
-                      >
-                        {Math.round(
-                          NORMAL_IJOM_MAX_HP * controls.ijomHpMultiplier,
-                        )}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-1 pr-2">
-                      <div className="flex items-center gap-1.5">
-                        <img
-                          src="/snow-ijom-walk.gif"
-                          alt=""
-                          className="h-5 w-5 object-contain"
-                        />
-                        <span className="font-black text-[#264653]">Snow</span>
-                      </div>
-                    </td>
-                    <td className="py-1 pl-3 text-right tabular-nums font-black">
-                      <span className="text-[#7b6f60]">
-                        {IJOM_BASE_DAMAGE * SNOW_IJOM_DAMAGE_MULTIPLIER}
-                      </span>
-                      <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                      <span
-                        className={
-                          controls.ijomDamageMultiplier > 1
-                            ? "text-[#2a9d8f]"
-                            : controls.ijomDamageMultiplier < 1
-                              ? "text-[#e76f51]"
-                              : "text-[#7b6f60]"
-                        }
-                      >
-                        {Math.round(
-                          IJOM_BASE_DAMAGE *
-                            SNOW_IJOM_DAMAGE_MULTIPLIER *
-                            controls.ijomDamageMultiplier,
-                        )}
-                      </span>
-                    </td>
-                    <td className="py-1 pl-3 text-right tabular-nums font-black">
-                      <span className="text-[#7b6f60]">{SNOW_IJOM_MAX_HP}</span>
-                      <span className="mx-1 font-bold text-[#7b6f60]">→</span>
-                      <span
-                        className={
-                          controls.ijomHpMultiplier > 1
-                            ? "text-[#2a9d8f]"
-                            : controls.ijomHpMultiplier < 1
-                              ? "text-[#e76f51]"
-                              : "text-[#7b6f60]"
-                        }
-                      >
-                        {Math.round(
-                          SNOW_IJOM_MAX_HP * controls.ijomHpMultiplier,
-                        )}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Right: live stats + launch button */}
-            <div className="flex flex-col items-start gap-2 sm:shrink-0 sm:items-end">
-              <dl className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex flex-row flex-wrap items-center justify-between gap-2 sm:flex-col sm:shrink-0 sm:items-end">
+              <dl className="grid grid-cols-2 gap-2 text-xs sm:w-auto">
                 <div className="rounded-md border-2 border-green-700/60 bg-white/60 p-3">
                   <dt className="font-black uppercase tracking-[0.16em] text-[#7b6f60]">
                     Castle HP

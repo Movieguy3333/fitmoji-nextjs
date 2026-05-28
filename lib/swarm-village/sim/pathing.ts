@@ -14,7 +14,7 @@ import {
 } from './constants';
 import { enemyReachedCastle, getIjomPackSize, resolveEnemySpacing } from './combat';
 import type { BoardPatch, Enemy } from './types';
-import { isDamageableUnit, getUnitMaxHp, getWallMaxHp } from './units';
+import { isDamageableUnit, getUnitMaxHp } from './units';
 import { clamp, keyForCell } from './utils';
 
 /**
@@ -125,7 +125,8 @@ export function stepEnemy(
   now: number,
   timeScale: number,
   difficultyRamp: number,
-  wallHpMultiplier = 1,
+  stoneWallHp: number,
+  woodWallHp: number,
 ): {
   next: Enemy | null;
   reachedCastle: boolean;
@@ -184,7 +185,7 @@ export function stepEnemy(
         row: wr,
         col: wc,
         updater: (cc) => {
-          const scaledMaxHp = Math.max(1, Math.round(getWallMaxHp(cc.wallType) * wallHpMultiplier));
+          const scaledMaxHp = Math.max(1, Math.round(cc.wallType === 'stone' ? stoneWallHp : woodWallHp));
           const nextHp = cc.wallHp - wallDamage;
           if (nextHp <= 0) {
             const nextHeight = Math.max(0, cc.wallHeight - 1);
