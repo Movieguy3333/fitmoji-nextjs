@@ -48,6 +48,9 @@ const DEFAULT_CONTROLS: SimControls = {
   quarterbackHp: getUnitMaxHp("quarterback", 1),
   stoneWallHp: getWallMaxHp("stone"),
   woodWallHp: getWallMaxHp("wood"),
+  boxerCooldownMs: 1000,
+  tennisCooldownMs: 3000,
+  quarterbackCooldownMs: 3500,
   normalEnemyDamage: IJOM_BASE_DAMAGE,
   normalEnemyHp: NORMAL_IJOM_MAX_HP,
   snowEnemyDamage: IJOM_BASE_DAMAGE * SNOW_IJOM_DAMAGE_MULTIPLIER,
@@ -75,10 +78,13 @@ export function VillagePageClient({
         [
           "boxerDamage",
           "boxerHp",
+          "boxerCooldownMs",
           "tennisDamage",
           "tennisHp",
+          "tennisCooldownMs",
           "quarterbackDamage",
           "quarterbackHp",
+          "quarterbackCooldownMs",
           "stoneWallHp",
           "woodWallHp",
           "normalEnemyDamage",
@@ -123,7 +129,10 @@ export function VillagePageClient({
     | "normalEnemyDamage"
     | "normalEnemyHp"
     | "snowEnemyDamage"
-    | "snowEnemyHp";
+    | "snowEnemyHp"
+    | "boxerCooldownMs"
+    | "tennisCooldownMs"
+    | "quarterbackCooldownMs";
 
   function handleValueChange(key: DirectValueKey, str: string) {
     setInputValues((prev) => ({ ...prev, [key]: str }));
@@ -349,7 +358,7 @@ export function VillagePageClient({
 
             {/* Center: stat tables */}
             <div className="min-w-0 flex-1 overflow-x-auto">
-              <div className="grid min-w-[380px] grid-cols-3 items-start gap-x-5">
+              <div className="grid min-w-[380px] grid-cols-[1.5fr_0.7fr_1fr] items-start gap-x-5">
                 {/* Labels row */}
                 <p className="mb-2 text-[0.52rem] font-black uppercase tracking-[0.18em] text-[#2a9d8f]">
                   Trees
@@ -374,6 +383,9 @@ export function VillagePageClient({
                       <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
                         HP
                       </th>
+                      <th className="pb-1 pl-3 text-right font-black uppercase tracking-[0.1em] text-[#7b6f60]">
+                        CD (ms)
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -384,26 +396,30 @@ export function VillagePageClient({
                           img: "/swarm-village/sprites/sudo_boxer_0.webp",
                           dmgKey: "boxerDamage",
                           hpKey: "boxerHp",
+                          cooldownKey: "boxerCooldownMs",
                         },
                         {
                           label: "Tennis",
                           img: "/swarm-village/sprites/sudo_tennis_0.webp",
                           dmgKey: "tennisDamage",
                           hpKey: "tennisHp",
+                          cooldownKey: "tennisCooldownMs",
                         },
                         {
                           label: "Quarterback",
                           img: "/swarm-village/sprites/sudo-football.png",
                           dmgKey: "quarterbackDamage",
                           hpKey: "quarterbackHp",
+                          cooldownKey: "quarterbackCooldownMs",
                         },
                       ] as Array<{
                         label: string;
                         img: string;
                         dmgKey: DirectValueKey;
                         hpKey: DirectValueKey;
+                        cooldownKey: DirectValueKey;
                       }>
-                    ).map(({ label, img, dmgKey, hpKey }) => (
+                    ).map(({ label, img, dmgKey, hpKey, cooldownKey }) => (
                       <tr
                         key={label}
                         className="border-b border-[#264653]/5 last:border-0"
@@ -425,6 +441,9 @@ export function VillagePageClient({
                         </td>
                         <td className="py-1 pl-2 text-right">
                           {statInput(hpKey, "focus:ring-[#2a9d8f]")}
+                        </td>
+                        <td className="py-1 pl-2 text-right">
+                          {statInput(cooldownKey, "focus:ring-[#2a9d8f]")}
                         </td>
                       </tr>
                     ))}

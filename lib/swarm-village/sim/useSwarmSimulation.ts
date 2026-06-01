@@ -48,6 +48,11 @@ export type SimControls = {
   quarterbackDamage: number;
   quarterbackHp: number;
 
+  // Tree combat cooldowns
+  boxerCooldownMs: number;
+  tennisCooldownMs: number;
+  quarterbackCooldownMs: number;
+
   // Wall HP (direct, per wall type)
   stoneWallHp: number;
   woodWallHp: number;
@@ -460,6 +465,7 @@ export function useSwarmSimulation(args: {
         projectiles: projectilesRef.current,
         now,
         treeDamages: { boxer: ctrl.boxerDamage, tennis: ctrl.tennisDamage, quarterback: ctrl.quarterbackDamage },
+        treeCooldowns: { boxer: ctrl.boxerCooldownMs, tennis: ctrl.tennisCooldownMs, quarterback: ctrl.quarterbackCooldownMs },
         nextProjectileId,
         smartFire: ctrl.smartFire,
       });

@@ -132,6 +132,7 @@ export function stepTreeCombat(args: {
   projectiles: Projectile[];
   now: number;
   treeDamages: { boxer: number; tennis: number; quarterback: number };
+  treeCooldowns: { boxer: number; tennis: number; quarterback: number };
   nextProjectileId: () => string;
   smartFire: boolean;
 }): {
@@ -139,7 +140,7 @@ export function stepTreeCombat(args: {
   boardPatches: BoardPatch[];
   enemyDamage: Map<string, number>;
 } {
-  const { board, gridCols, enemies, projectiles, now, treeDamages, nextProjectileId, smartFire } = args;
+  const { board, gridCols, enemies, projectiles, now, treeDamages, treeCooldowns, nextProjectileId, smartFire } = args;
   const boardPatches: BoardPatch[] = [];
   const spawnedProjectiles: Projectile[] = [];
   const enemyDamage = new Map<string, number>();
@@ -159,11 +160,7 @@ export function stepTreeCombat(args: {
       const unit = cell.unit;
       const isBoxer = unit === 'boxer';
       const isQB = unit === 'quarterback';
-      const cooldownMs = isBoxer
-        ? BOXER_COOLDOWN_MS
-        : isQB
-          ? QUARTERBACK_COOLDOWN_MS
-          : TENNIS_COOLDOWN_MS;
+      const cooldownMs = treeCooldowns[unit];
       const range = isBoxer ? BOXER_RANGE : isQB ? QUARTERBACK_RANGE : TENNIS_RANGE;
 
       if (now - cell.unitLastAttackAt < cooldownMs) continue;
