@@ -239,6 +239,28 @@ export function SwarmSimControls({ value, onChange, swarmLocked }: Props) {
                 onChange={(v) => set("snowIjomSpawnChance", v)}
                 disabled={swarmLocked}
               />
+
+              <Slider
+                label="Super spawn chance"
+                value={value.superSpawnBaseChance}
+                min={0}
+                max={0.85}
+                step={0.01}
+                display={fmtPercent}
+                onChange={(v) => set("superSpawnBaseChance", v)}
+                disabled={swarmLocked}
+              />
+
+              <Slider
+                label="Super min wave size"
+                value={value.superMinWaveSize}
+                min={0}
+                max={100}
+                step={1}
+                display={fmt}
+                onChange={(v) => set("superMinWaveSize", v)}
+                disabled={swarmLocked}
+              />
             </div>
           </div>
         </div>
