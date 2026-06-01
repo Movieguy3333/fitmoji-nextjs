@@ -64,8 +64,10 @@ export type SimControls = {
   enemySpawnIntervalMs: number;
   /** Chance of spawning a snow Ijom. */
   snowIjomSpawnChance: number;
-  /** Base chance of spawning a super ijom */
+  /** Base chance of spawning a super ijom. */
   superSpawnBaseChance: number;
+  /** minimum wave size threshold to allow super ijom spawning. */
+  superMinWaveSize: number;
   /** Streak count used to calculate wave size. */
   streakCount: number;
 
@@ -177,6 +179,7 @@ function spawnEnemy(
   speedMultiplier: number,
   snowIjomSpawnChance: number,
   superSpawnBaseChance: number,
+  superMinWaveSize: number,
   waveSize: number,
   waveSpawned: number,
 ): { enemy: Enemy; spawnCredits: number } | null {
@@ -184,7 +187,7 @@ function spawnEnemy(
     Math.random() < snowIjomSpawnChance ? "snow" : "normal";
 
   const remainingIjoms = waveSize - waveSpawned;
-  let packSize = getNextSpawnPackSize(waveSize, enemies.length, remainingIjoms, superSpawnBaseChance);
+  let packSize = getNextSpawnPackSize(waveSize, enemies.length, remainingIjoms, superSpawnBaseChance, superMinWaveSize);
 
   let pos = getEnemySpawnPosition(enemies, gridCols, variant, packSize);
 
@@ -372,7 +375,7 @@ export function useSwarmSimulation(args: {
       }
 
       // ── Spawn ─────────────────────────────────────────────────
-      const compressedWaveActive = WAVE_SIZE > IJOM_SUPER_WAVE_SIZE_THRESHOLD;
+      const compressedWaveActive = WAVE_SIZE > ctrl.superMinWaveSize;
       const canSpawnEnemyEntity =
         !compressedWaveActive || ens.length < IJOM_CONCURRENT_ENTITY_CAP;
 
@@ -392,6 +395,7 @@ export function useSwarmSimulation(args: {
           ctrl.enemySpeedMultiplier,
           ctrl.snowIjomSpawnChance,
           ctrl.superSpawnBaseChance,
+          ctrl.superMinWaveSize,
           WAVE_SIZE,
           ws,
         );

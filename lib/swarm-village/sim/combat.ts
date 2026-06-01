@@ -59,8 +59,9 @@ export const getNextSpawnPackSize = (
   activeEnemyCount: number,
   remainingIjoms: number,
   superSpawnBaseChance: number,
+  superMinWaveSize: number,
 ) => {
-  if (waveTotal <= IJOM_SUPER_WAVE_SIZE_THRESHOLD) return 1;
+  if (waveTotal <= superMinWaveSize) return 1;
   if (remainingIjoms < IJOM_SUPER_PACK_SIZE) return 1;
   if (activeEnemyCount >= IJOM_SUPER_FORCE_ENTITY_COUNT) {
     return IJOM_SUPER_PACK_SIZE;

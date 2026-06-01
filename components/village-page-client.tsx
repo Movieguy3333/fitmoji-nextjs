@@ -56,6 +56,7 @@ const DEFAULT_CONTROLS: SimControls = {
   enemySpawnIntervalMs: 700,
   snowIjomSpawnChance: 0.2,
   superSpawnBaseChance: 0.35,
+  superMinWaveSize: 50,
   streakCount: 0,
   smartFire: false,
 };
