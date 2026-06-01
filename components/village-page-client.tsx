@@ -55,6 +55,7 @@ const DEFAULT_CONTROLS: SimControls = {
   enemySpeedMultiplier: 1.0,
   enemySpawnIntervalMs: 700,
   snowIjomSpawnChance: 0.2,
+  superSpawnBaseChance: 0.35,
   streakCount: 0,
   smartFire: false,
 };

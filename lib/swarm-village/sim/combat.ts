@@ -58,6 +58,7 @@ export const getNextSpawnPackSize = (
   waveTotal: number,
   activeEnemyCount: number,
   remainingIjoms: number,
+  superSpawnBaseChance: number,
 ) => {
   if (waveTotal <= IJOM_SUPER_WAVE_SIZE_THRESHOLD) return 1;
   if (remainingIjoms < IJOM_SUPER_PACK_SIZE) return 1;
@@ -69,8 +70,8 @@ export const getNextSpawnPackSize = (
     Math.min(1, activeEnemyCount / IJOM_CONCURRENT_ENTITY_CAP),
   );
   const superChance =
-    IJOM_SUPER_SPAWN_BASE_CHANCE +
-    (IJOM_SUPER_SPAWN_MAX_CHANCE - IJOM_SUPER_SPAWN_BASE_CHANCE) *
+    superSpawnBaseChance +
+    (IJOM_SUPER_SPAWN_MAX_CHANCE - superSpawnBaseChance) *
       crowdPressure;
   return Math.random() < superChance ? IJOM_SUPER_PACK_SIZE : 1;
 };

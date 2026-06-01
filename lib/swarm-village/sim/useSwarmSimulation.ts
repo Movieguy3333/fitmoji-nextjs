@@ -64,7 +64,11 @@ export type SimControls = {
   enemySpawnIntervalMs: number;
   /** Chance of spawning a snow Ijom. */
   snowIjomSpawnChance: number;
+  /** Base chance of spawning a super ijom */
+  superSpawnBaseChance: number;
+  /** Streak count used to calculate wave size. */
   streakCount: number;
+
   /** When true, trees skip firing if in-flight projectiles will already kill the target. */
   smartFire: boolean;
 };
@@ -172,6 +176,7 @@ function spawnEnemy(
   snowEnemyHp: number,
   speedMultiplier: number,
   snowIjomSpawnChance: number,
+  superSpawnBaseChance: number,
   waveSize: number,
   waveSpawned: number,
 ): { enemy: Enemy; spawnCredits: number } | null {
@@ -179,7 +184,7 @@ function spawnEnemy(
     Math.random() < snowIjomSpawnChance ? "snow" : "normal";
 
   const remainingIjoms = waveSize - waveSpawned;
-  let packSize = getNextSpawnPackSize(waveSize, enemies.length, remainingIjoms);
+  let packSize = getNextSpawnPackSize(waveSize, enemies.length, remainingIjoms, superSpawnBaseChance);
 
   let pos = getEnemySpawnPosition(enemies, gridCols, variant, packSize);
 
@@ -386,6 +391,7 @@ export function useSwarmSimulation(args: {
           ctrl.snowEnemyHp,
           ctrl.enemySpeedMultiplier,
           ctrl.snowIjomSpawnChance,
+          ctrl.superSpawnBaseChance,
           WAVE_SIZE,
           ws,
         );
